@@ -1,0 +1,91 @@
+@* Profile page (React: features/profile/ProfilePage) *@
+<div id="cp-profile">
+    <div id="pf_loading"><span class="ant-spin"></span></div>
+    <div id="pf_wrap" style="display:none">
+        <div class="mb-5 flex items-center gap-3.5">
+            <span id="pf_avatar" style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:9999px;background:var(--color-brand);color:#fff;font-weight:700;font-size:20px"></span>
+            <div>
+                <h4 id="pf_name" class="m-0 text-xl font-semibold text-white"></h4>
+                <div id="pf_email" class="text-[var(--text-2)]"></div>
+            </div>
+        </div>
+
+        <div class="ant-card">
+            <div class="ant-tabs ant-tabs-left" id="pf_tabs" data-initial="profile" style="padding:0">
+                <div class="ant-tabs-nav">
+                    <button type="button" class="ant-tabs-tab active" data-tab="profile"><span class="anticon">@Html.Raw(Icons.Get("Idcard"))</span>@Html.T("customer.accountTab_profile")</button>
+                    <button type="button" class="ant-tabs-tab" data-tab="password"><span class="anticon">@Html.Raw(Icons.Get("Lock"))</span>@Html.T("customer.accountTab_password")</button>
+                    <button type="button" class="ant-tabs-tab" data-tab="sessions"><span class="anticon">@Html.Raw(Icons.Get("Laptop"))</span>@Html.T("customer.accountTab_sessions")</button>
+                </div>
+                <div class="ant-tabs-content">
+                    <div class="ant-tabs-tabpane active" data-tab="profile">
+                        <div style="padding:24px;max-width:468px">
+                            <div class="ant-form-item mb-0">
+                                <label class="ant-form-item-label">@Html.T("user.email")</label>
+                                <input id="pf_f_email" class="ant-input" disabled />
+                            </div>
+                            <div class="ant-form-item mb-0 mt-5">
+                                <label class="ant-form-item-label required">@Html.T("user.fullName")</label>
+                                <input id="pf_f_name" class="ant-input" />
+                                <div class="ant-form-item-explain" id="pf_e_name" style="display:none"></div>
+                            </div>
+                            <div class="ant-form-item mb-0 mt-5">
+                                <label class="ant-form-item-label">@Html.T("customer.accountPhone")</label>
+                                <input id="pf_f_phone" class="ant-input" />
+                                <div class="ant-form-item-explain" id="pf_e_phone" style="display:none"></div>
+                            </div>
+                            <div class="mt-5">
+                                <button type="button" class="ant-btn ant-btn-primary" id="pf_save">@Html.T("common.save")</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ant-tabs-tabpane" data-tab="password">
+                        <div style="padding:24px;max-width:468px">
+                            <div class="ant-alert ant-alert-info" id="pf_pw_info">
+                                <span class="ant-alert-icon anticon">@Html.Raw(Icons.Get("InfoCircleFilled"))</span>
+                                <div class="flex-1">@Html.T("customer.passwordSignsOutOthers")</div>
+                            </div>
+                            <div class="ant-form-item mb-0 mt-5">
+                                <label class="ant-form-item-label required">@Html.T("customer.passwordCurrent")</label>
+                                <div class="ant-input-affix">
+                                    <input id="pf_f_cur" class="ant-input" type="password" autocomplete="current-password" />
+                                    <span class="ant-input-suffix" data-eye="pf_f_cur"><span class="anticon">@Html.Raw(Icons.Get("EyeInvisible"))</span></span>
+                                </div>
+                                <div class="ant-form-item-explain" id="pf_e_cur" style="display:none"></div>
+                            </div>
+                            <div class="ant-form-item mb-0 mt-5">
+                                <label class="ant-form-item-label required">@Html.T("customer.passwordNew")</label>
+                                <div class="ant-input-affix">
+                                    <input id="pf_f_new" class="ant-input" type="password" autocomplete="new-password" />
+                                    <span class="ant-input-suffix" data-eye="pf_f_new"><span class="anticon">@Html.Raw(Icons.Get("EyeInvisible"))</span></span>
+                                </div>
+                                <div class="ant-form-item-explain" id="pf_e_new" style="display:none"></div>
+                                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("user.passwordHint")</div>
+                            </div>
+                            <div class="ant-form-item mb-0 mt-5">
+                                <label class="ant-form-item-label required">@Html.T("customer.passwordConfirm")</label>
+                                <div class="ant-input-affix">
+                                    <input id="pf_f_confirm" class="ant-input" type="password" autocomplete="new-password" />
+                                    <span class="ant-input-suffix" data-eye="pf_f_confirm"><span class="anticon">@Html.Raw(Icons.Get("EyeInvisible"))</span></span>
+                                </div>
+                                <div class="ant-form-item-explain" id="pf_e_confirm" style="display:none"></div>
+                            </div>
+                            <div class="mt-5">
+                                <button type="button" class="ant-btn ant-btn-primary" id="pf_pw_save">@Html.T("common.save")</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ant-tabs-tabpane" data-tab="sessions">
+                        <div style="padding:24px">
+                            <div class="ant-list" id="pf_sessions"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="/js/profile.js"></script>
+}
