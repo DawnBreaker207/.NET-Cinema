@@ -1,0 +1,53 @@
+name: ci
+
+# FE builds + deploys directly (runner = host).
+
+on:
+  push:
+    branches: [develop, main]
+    paths-ignore: ['**.md', 'docs/**']
+  pull_request:
+    branches: [develop, main]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch: # manual re-run
+
+permissions:
+  contents: read # no cross-repo token needed: runner is the deploy host
+
+concurrency:
+  group: ci-fe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Remove root-owned files from previous runs
+        run: docker run --rm -v "${{ github.workspace }}:/ws" alpine sh -c "rm -rf /ws/dist /ws/node_modules" || true
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 pinned
+      - name: Check, test & build (Node in Docker)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/app" \
+            -w /app \
+            -e VITE_API_BASE_URL=http://localhost:8080/api/v1 \
+            --user "$(id -u):$(id -g)" \
+            node:22-alpine \
+            sh -c "npm ci && npx tsc --noEmit -p tsconfig.app.json && npm run lint && npm run test && npm run build"
+      - name: Build image
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        run: |
+          # Read VITE_TMDB_READ_TOKEN from the deploy .env (written by infra/sync.yml).
+          VITE_TMDB_READ_TOKEN=$(grep -m1 '^VITE_TMDB_READ_TOKEN=' "$HOME/apps/cinema/.env" | cut -d= -f2-)
+          docker build \
+            --build-arg VITE_API_BASE_URL=/api/v1 \
+            --build-arg VITE_TMDB_READ_TOKEN="$VITE_TMDB_READ_TOKEN" \
+            -t cinema-frontend:${{ github.sha }} \
+            -t cinema-frontend:latest \
+            .
+      - name: Deploy
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        env:
+          SHA: ${{ github.sha }}
+        run: bash "$HOME/apps/cinema/scripts/deploy.sh" frontend "$SHA"
