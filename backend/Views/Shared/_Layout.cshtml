@@ -1,0 +1,172 @@
+@using System.Security.Claims
+@{
+    var hideNav = ViewData["HideNav"] is true;
+    var path = Context.Request.Path.Value?.ToLowerInvariant() ?? "/";
+    var lang = Context.Request.Cookies["cp.lang"] == "en" ? "en" : "vi";
+    var dict = lang == "en" ? Cinema.Api.Views.LangData.En : Cinema.Api.Views.LangData.Vi;
+    string T(string k) => dict.TryGetValue(k, out var v) ? v : k;
+    var role = User.FindFirst("role")?.Value ?? "";
+    var isAdmin = role == "admin";
+    var email = User.Identity?.Name ?? "";
+    var initial = (email.Length > 0 ? email[0].ToString() : "U").ToUpperInvariant();
+    var toggleLang = lang == "vi" ? "en" : "vi";
+    var returnUrl = Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString);
+
+    var overview = new[] { ("/admin", "Dashboard", "menu.dashboard") };
+    var operations = new[] {
+        ("/admin/catalog", "VideoCamera", "menu.catalog"),
+        ("/admin/counter", "Shop", "menu.counter"),
+    };
+    var management = new[] {
+        ("/admin/bookings", "Schedule", "menu.bookings"),
+        ("/admin/users", "Team", "menu.users"),
+        ("/admin/promotions", "Gift", "menu.promotions"),
+        ("/admin/pricing", "Dollar", "menu.pricingAdmin"),
+        ("/admin/monitoring", "FileSearch", "menu.monitoring"),
+    };
+    var all = overview.Concat(operations).Concat(management).ToArray();
+    string IsActive(string href) => href == "/admin"
+        ? (path == "/admin" ? "active" : "")
+        : (path.StartsWith(href) ? "active" : "");
+    string? currentLabel = null;
+    foreach (var it in all.OrderByDescending(x => x.Item1.Length))
+    {
+        if (it.Item1 == "/admin" ? path == "/admin" : path.StartsWith(it.Item1))
+        {
+            currentLabel = T(it.Item3);
+            break;
+        }
+    }
+
+}
+<!DOCTYPE html>
+<html lang="@lang">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cinema Project</title>
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body class="min-h-screen bg-ink-sunken font-body text-[var(--text-1)] antialiased">
+@if (hideNav)
+{
+    <main class="min-h-screen">@RenderBody()</main>
+}
+else
+{
+<div class="flex min-h-screen">
+    <aside class="cp-sider">
+        <div class="cp-sider-logo">
+            <span class="cp-logo-badge"><span class="anticon">@Html.Raw(Icons.Get("VideoCamera"))</span></span>
+            <span class="cp-logo-text"><span class="text-white">Cinema</span> <span class="text-brand">Project</span></span>
+        </div>
+        <nav class="cp-menu flex-1">
+            @foreach (var it in overview)
+            {
+                <a href="@it.Item1" class="cp-menu-item @IsActive(it.Item1)">
+                    <span class="anticon">@Html.Raw(Icons.Get(it.Item2))</span>
+                    <span>@T(it.Item3)</span>
+                </a>
+            }
+            <div class="cp-menu-group">@T("menu.groupOperations")</div>
+            @foreach (var it in operations)
+            {
+                <a href="@it.Item1" class="cp-menu-item @IsActive(it.Item1)">
+                    <span class="anticon">@Html.Raw(Icons.Get(it.Item2))</span>
+                    <span>@T(it.Item3)</span>
+                </a>
+            }
+            @if (isAdmin)
+            {
+                <div class="cp-menu-group">@T("menu.groupManagement")</div>
+                @foreach (var it in management)
+                {
+                    <a href="@it.Item1" class="cp-menu-item @IsActive(it.Item1)">
+                        <span class="anticon">@Html.Raw(Icons.Get(it.Item2))</span>
+                        <span>@T(it.Item3)</span>
+                    </a>
+                }
+            }
+        </nav>
+        <div class="cp-sider-trigger" id="cp-collapse" title="@T("common.appName")">
+            <span class="anticon text-sm cp-chevron-expanded">@Html.Raw(Icons.Get("Left"))</span>
+            <span class="anticon text-sm cp-chevron-collapsed hidden">@Html.Raw(Icons.Get("Right"))</span>
+        </div>
+    </aside>
+    <div class="flex min-w-0 flex-1 flex-col">
+        <header class="cp-header">
+            <div class="cp-breadcrumb">
+                <a href="/admin" aria-label="Home"><span class="anticon text-sm">@Html.Raw(Icons.Get("Home"))</span></a>
+                @if (currentLabel != null)
+                {
+                    <span class="sep anticon text-[10px]">@Html.Raw(Icons.Get("Right"))</span>
+                    <span>@currentLabel</span>
+                }
+            </div>
+            <div class="cp-header-right">
+                <a class="cp-lang-btn" style="width:28px;height:28px;border-radius:9999px;overflow:hidden;padding:0;border:1px solid var(--border-1)"
+                   href="@($"/account/lang?l={toggleLang}&returnUrl={returnUrl}")"
+                   title="@(lang == "vi" ? T("customer.switchToEnglish") : T("customer.switchToVietnamese"))">
+                    @if (lang == "vi")
+                    {
+                        <svg viewBox="0 0 30 20" preserveAspectRatio="xMidYMid slice" class="mx-auto" style="width:22px;height:22px;border-radius:9999px" aria-hidden="true">
+                            <rect width="30" height="20" fill="#DA251D" />
+                            <path d="M15 4.2 16.6 9h5l-4.1 2.9 1.6 4.8L15 13.8l-4.1 2.9 1.6-4.8L8.4 9h5Z" fill="#FFFF00" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" class="mx-auto" style="width:22px;height:22px;border-radius:9999px" aria-hidden="true">
+                            <clipPath id="cp-uk-clip"><path d="M30 15h30v15zv15H0zH0V0zV0h30z" /></clipPath>
+                            <rect width="60" height="30" fill="#012169" />
+                            <path d="M0 0l60 30M60 0L0 30" stroke="#FFFFFF" stroke-width="6" />
+                            <path d="M0 0l60 30M60 0L0 30" clip-path="url(#cp-uk-clip)" stroke="#C8102E" stroke-width="4" />
+                            <path d="M30 0v30M0 15h60" stroke="#FFFFFF" stroke-width="10" />
+                            <path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6" />
+                        </svg>
+                    }
+                </a>
+                <button type="button" class="cp-avatar" data-dropdown="cp-avatar-menu" aria-haspopup="menu">@initial</button>
+                <div class="cp-dropdown" id="cp-avatar-menu" style="width:264px">
+                    <div class="px-3 py-2">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white">@initial</span>
+                            <div class="min-w-0">
+                                <div class="truncate text-sm text-white">@email</div>
+                                <div class="truncate text-xs text-[var(--text-3)]">@(isAdmin ? T("user.role_admin") : T("user.role_staff"))</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cp-dropdown-divider"></div>
+                    @if (isAdmin)
+                    {
+                        <a class="cp-dropdown-item" href="/admin">
+                            <span class="anticon">@Html.Raw(Icons.Get("Dashboard"))</span>@T("customer.adminPanel")
+                        </a>
+                    }
+                    <a class="cp-dropdown-item" href="/account/profile">
+                        <span class="anticon">@Html.Raw(Icons.Get("User"))</span>@T("common.profile")
+                    </a>
+                    <div class="cp-dropdown-divider"></div>
+                    <a class="cp-dropdown-item" href="/account/logout" style="color:#E5625C">
+                        <span class="anticon">@Html.Raw(Icons.Get("Logout"))</span>@T("common.logout")
+                    </a>
+                </div>
+            </div>
+        </header>
+        <main class="mx-4 mt-4 flex flex-1 flex-col">
+            <div class="cp-content-card flex-1">@RenderBody()</div>
+            <footer class="cp-footer">@T("common.appName") © @DateTime.UtcNow.Year</footer>
+        </main>
+    </div>
+</div>
+}
+<script>
+    window.CP_ICONS = @Html.Raw(JsonSerializer.Serialize(Icons.All()));
+    window.CP_LANG = @Html.Raw(JsonSerializer.Serialize(Cinema.Api.Views.Lang.ForJs(lang)));
+</script>
+<script src="/js/api.js"></script>
+<script src="/js/console.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
