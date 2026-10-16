@@ -1,0 +1,74 @@
+# ==========================================
+# .NET / C# (Official Visual Studio & Rider)
+# ==========================================
+
+# Build Results & Artifacts
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+artifacts/
+TestResults/
+*.nupkg
+*.snupkg
+
+# Debugging / Symbol files
+*.pdb
+*.crash
+*.dmp
+*.mdmp
+
+# Visual Studio / Rider / Omnisharp cache & user files
+.vs/
+.idea/
+.vscode/
+*.DotSettings.user
+*.rsuser
+*.suo
+*.user
+*.userprefs
+*.userosscache
+*.sln.docstates
+_ReSharper*/
+
+# ASP.NET Core Sensitive Configs
+backend/appsettings.Production.json
+backend/appsettings.*.local.json
+backend/tmp/
+
+# ==========================================
+# General Tooling & Scratch
+# ==========================================
+.tmp/
+.codegraph/
+*.log
+
+# Large binary tools
+tools/*.exe
+
+# ==========================================
+# Frontend (Node / React)
+# ==========================================
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/.last-run.json
+
+# ==========================================
+# Python & Load Test Outputs
+# ==========================================
+__pycache__/
+*.pyc
+load/results/
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
