@@ -1,0 +1,103 @@
+@* Operator login (React: features/auth/LoginPage). Server POST + client validation. *@
+@{
+    ViewData["Title"] = Html.T("auth.loginTitle").ToString();
+    Layout = "_Layout";
+    ViewData["HideNav"] = true;
+    var lang = Context.Request.Cookies["cp.lang"] == "en" ? "en" : "vi";
+}
+<div class="flex min-h-screen flex-col items-center justify-center gap-5 bg-ink-base bg-[radial-gradient(560px_circle_at_12%_-10%,rgba(211,59,86,0.16),transparent_60%),radial-gradient(480px_circle_at_108%_110%,rgba(211,59,86,0.12),transparent_55%)] px-4 py-8">
+    <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white shadow-[0_12px_24px_-8px_rgba(211,59,86,0.4)]" aria-hidden="true">
+        <span class="anticon" style="font-size:26px">@Html.Raw(Icons.Get("VideoCamera"))</span>
+    </span>
+    <div class="w-[400px] max-w-[92vw] rounded-lg border border-ink-border bg-ink-raised p-6">
+        <h3 class="mb-1 text-center text-[22px] font-semibold text-white">@Html.T("auth.loginTitle")</h3>
+        <p class="mb-4 text-center text-sm text-neutral-400">@Html.T("auth.loginSubtitle")</p>
+        <div id="login_alert"></div>
+        <form method="post" action="/account/login" autocomplete="off" id="login_form" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+            <input type="hidden" name="deviceId" id="deviceId" value="" />
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label" for="email">@Html.T("auth.email")</label>
+                <div class="ant-input-affix">
+                    <span class="ant-input-prefix anticon">@Html.Raw(Icons.Get("Mail"))</span>
+                    <input type="email" id="email" name="email" class="ant-input ant-input-lg" placeholder="admin@cinema.local" value="@ViewBag.Email" />
+                </div>
+                <div class="ant-form-item-explain" id="login_e_email" style="display:none"></div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label" for="password">@Html.T("auth.password")</label>
+                <div class="ant-input-affix">
+                    <span class="ant-input-prefix anticon">@Html.Raw(Icons.Get("Lock"))</span>
+                    <input type="password" id="password" name="password" class="ant-input ant-input-lg" placeholder="••••••" />
+                    <span class="ant-input-suffix" id="login_eye"><span class="anticon">@Html.Raw(Icons.Get("EyeInvisible"))</span></span>
+                </div>
+                <div class="ant-form-item-explain" id="login_e_password" style="display:none"></div>
+            </div>
+            <button type="submit" class="ant-btn ant-btn-primary ant-btn-lg ant-btn-block mt-5" id="login_go">@Html.T("auth.login")</button>
+        </form>
+        <p class="mb-0 mt-4 text-center text-[13px] text-neutral-400">@Html.T("auth.loginHint")</p>
+    </div>
+</div>
+<script>
+(function () {
+    'use strict';
+    var L = function (k) { return (window.CP_LANG && window.CP_LANG[k]) || k; };
+    var form = document.getElementById('login_form');
+    if (!form) return;
+    try {
+        var key = 'cp_device_id', id = localStorage.getItem(key);
+        if (!id) {
+            if (typeof crypto.randomUUID === 'function') { id = crypto.randomUUID(); }
+            else {
+                var b = new Uint8Array(16);
+                crypto.getRandomValues(b);
+                b[6] = (b[6] & 0x0f) | 0x40;
+                b[8] = (b[8] & 0x3f) | 0x80;
+                var hex = Array.from(b).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+                id = hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+            }
+            localStorage.setItem(key, id);
+        }
+        document.getElementById('deviceId').value = id;
+    } catch (e) { /* private mode: login still works */ }
+    var emailRe = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+    function fail(input, explainId, msg) {
+        var ex = document.getElementById(explainId);
+        ex.textContent = msg || '';
+        ex.style.display = msg ? '' : 'none';
+        input.style.borderColor = msg ? '#D22F27' : '';
+        return !msg;
+    }
+    var email = document.getElementById('email');
+    var password = document.getElementById('password');
+    form.addEventListener('submit', function (ev) {
+        var ok = true;
+        var ev_ = email.value.trim();
+        if (!ev_) { fail(email, 'login_e_email', L('auth.emailRequired')); ok = false; }
+        else if (!emailRe.test(ev_)) { fail(email, 'login_e_email', L('auth.emailInvalid')); ok = false; }
+        else { fail(email, 'login_e_email', ''); }
+        if (!password.value) { fail(password, 'login_e_password', L('auth.passwordRequired')); ok = false; }
+        else if (password.value.length < 6) { fail(password, 'login_e_password', L('auth.passwordMin')); ok = false; }
+        else { fail(password, 'login_e_password', ''); }
+        if (!ok) { ev.preventDefault(); return; }
+        var btn = document.getElementById('login_go');
+        btn.disabled = true;
+    });
+    document.getElementById('login_eye').addEventListener('click', function () {
+        var show = password.type === 'password';
+        password.type = show ? 'text' : 'password';
+        this.innerHTML = '<span class="anticon">' + ((window.CP_ICONS && window.CP_ICONS[show ? 'Eye' : 'EyeInvisible']) || '') + '</span>';
+    });
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <text>
+        (function () {
+            var box = document.getElementById('login_alert');
+            box.innerHTML = '<div class="ant-alert ant-alert-error" style="margin-bottom:16px"><span class="ant-alert-icon anticon">' +
+                ((window.CP_ICONS && window.CP_ICONS['CloseCircleFilled']) || '') + '</span><div class="flex-1">@ViewData.ModelState[string.Empty]?.Errors.FirstOrDefault()?.ErrorMessage</div></div>';
+        })();
+        </text>
+    }
+})();
+</script>
