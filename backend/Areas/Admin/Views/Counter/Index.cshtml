@@ -1,0 +1,197 @@
+@* Counter page (React: features/counter/CounterPage + staff BoxOffice/CustomerLookup tabs) *@
+@{
+    ViewData["Title"] = Html.T("menu.counter").ToString();
+}
+<div id="cp-counter">
+    <div class="cp-page-head">
+        <h1 class="cp-page-title">@Html.T("menu.counter")</h1>
+    </div>
+
+    <div class="ant-tabs" id="ct_tabs" data-initial="boxOffice">
+        <div class="ant-tabs-nav">
+            <button type="button" class="ant-tabs-tab active" data-tab="boxOffice">@Html.T("menu.boxOffice")</button>
+            <button type="button" class="ant-tabs-tab" data-tab="customerLookup">@Html.T("menu.customerLookup")</button>
+        </div>
+        <div class="ant-tabs-content">
+            <div class="ant-tabs-tabpane active" data-tab="boxOffice">
+                <div class="ant-tabs" id="ct_inner_tabs" data-initial="dashboard">
+                    <div class="ant-tabs-nav">
+                        <button type="button" class="ant-tabs-tab active" data-tab="dashboard">@Html.T("boxOffice.tabDashboard")</button>
+                        <button type="button" class="ant-tabs-tab" data-tab="sell">@Html.T("boxOffice.tabSell")</button>
+                        <button type="button" class="ant-tabs-tab" data-tab="pickup">@Html.T("boxOffice.tabPickup")</button>
+                        <button type="button" class="ant-tabs-tab" data-tab="concession">@Html.T("boxOffice.tabConcession")</button>
+                        <button type="button" class="ant-tabs-tab" data-tab="lookup">@Html.T("boxOffice.tabLookup")</button>
+                    </div>
+                    <div class="ant-tabs-content">
+                        <div class="ant-tabs-tabpane active" data-tab="dashboard">
+                            <div class="ant-input ant-date-range" style="height:32px;width:200px;margin-bottom:16px">
+                                <span class="ant-date-shell" style="flex:1">
+                                    <input id="ct_date" type="date" required />
+                                    <span class="ant-date-ph">@Html.T("boxOffice.today")</span>
+                                </span>
+                                <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+                            </div>
+                            <div id="ct_db_error"></div>
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" style="margin-bottom:16px" id="ct_stats"></div>
+                            <div class="ant-table-wrap">
+                                <table class="ant-table" style="min-width:900px">
+                                    <thead>
+                                        <tr>
+                                            <th>@Html.T("showtime.movie")</th>
+                                            <th style="width:140px">@Html.T("showtime.hall")</th>
+                                            <th style="width:160px">@Html.T("showtime.startAt")</th>
+                                            <th style="width:100px">@Html.T("showtime.status")</th>
+                                            <th class="text-right" style="width:90px">@Html.T("boxOffice.capacity")</th>
+                                            <th class="text-right" style="width:80px">@Html.T("boxOffice.held")</th>
+                                            <th class="text-right" style="width:80px">@Html.T("boxOffice.sold")</th>
+                                            <th class="text-right" style="width:100px">@Html.T("boxOffice.available")</th>
+                                            <th class="text-right" style="width:100px">@Html.T("boxOffice.checkedIn")</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ct_db_rows"></tbody>
+                                </table>
+                            </div>
+                            <div class="ant-card" style="margin-top:16px">
+                                <div class="ant-card-head">@Html.T("boxOffice.counterMoviesTitle")</div>
+                                <div class="ant-card-body" style="padding:0">
+                                    <div class="ant-table-wrap" style="border:0;border-radius:0">
+                                        <table class="ant-table" style="min-width:500px">
+                                            <thead>
+                                                <tr>
+                                                    <th>@Html.T("report.movie")</th>
+                                                    <th class="text-right" style="width:110px">@Html.T("report.tickets")</th>
+                                                    <th class="text-right" style="width:150px">@Html.T("report.revenue")</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ct_mv_rows"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="px-6 py-4 text-xs text-[var(--text-2)]">@Html.T("boxOffice.counterMoviesHint")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ant-tabs-tabpane" data-tab="sell">
+                            <div id="ct_sell_wrap"></div>
+                        </div>
+                        <div class="ant-tabs-tabpane" data-tab="pickup">
+                            <div class="ant-card">
+                                <div class="ant-card-head">@Html.T("boxOffice.tabPickup")</div>
+                                <div class="ant-card-body">
+                                    <div class="ant-input-affix ant-input-search" style="width:340px;margin-bottom:16px">
+                                        <input id="ct_pk_search" class="ant-input" placeholder="@Html.T("boxOffice.pickupSearchPlaceholder")" />
+                                        <span class="ant-input-suffix" id="ct_pk_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+                                    </div>
+                                    <div id="ct_pk_error"></div>
+                                    <div class="ant-table-wrap">
+                                        <table class="ant-table" style="min-width:700px">
+                                            <thead>
+                                                <tr>
+                                                    <th>@Html.T("boxOffice.pickupCustomer")</th>
+                                                    <th>@Html.T("boxOffice.pickupItems")</th>
+                                                    <th class="text-right" style="width:130px">@Html.T("report.totalSales")</th>
+                                                    <th class="text-right" style="width:150px">@Html.T("common.actions")</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ct_pk_rows"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ant-tabs-tabpane" data-tab="concession">
+                            <div id="ct_cc_wrap"></div>
+                        </div>
+                        <div class="ant-tabs-tabpane" data-tab="lookup">
+                            <div class="ant-card">
+                                <div class="ant-card-head">@Html.T("boxOffice.lookupOrder")</div>
+                                <div class="ant-card-body">
+                                    <div class="flex flex-col gap-4" style="margin-bottom:16px">
+                                        <div style="max-width:480px">
+                                            <div class="text-sm text-[var(--text-2)]" style="margin-bottom:8px">@Html.T("boxOffice.lookupByOrder")</div>
+                                            <div class="flex" style="width:100%">
+                                                <input id="ct_lk_id" class="ant-input rounded-r-none" placeholder="@Html.T("boxOffice.lookupOrderPlaceholder")" />
+                                                <button type="button" class="ant-btn ant-btn-primary -ml-px shrink-0 rounded-l-none" id="ct_lk_go">@Html.T("common.search")</button>
+                                                <button type="button" class="ant-btn -ml-px shrink-0 rounded-l-none" id="ct_lk_scan">@Html.T("boxOffice.scanQr")</button>
+                                            </div>
+                                        </div>
+                                        <div style="max-width:480px">
+                                            <div class="text-sm text-[var(--text-2)]" style="margin-bottom:8px">@Html.T("boxOffice.lookupByPhone")</div>
+                                            <div class="flex" style="width:100%">
+                                                <input id="ct_lk_phone" class="ant-input rounded-r-none" placeholder="@Html.T("boxOffice.lookupPhonePlaceholder")" />
+                                                <button type="button" class="ant-btn -ml-px shrink-0 rounded-l-none" id="ct_lk_phone_go">@Html.T("boxOffice.lookupPhone")</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="ct_lk_lists"></div>
+                                    <div id="ct_lk_result"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ant-tabs-tabpane" data-tab="customerLookup">
+                <div class="ant-input-affix ant-input-search" style="width:320px;margin-bottom:16px">
+                    <input id="ct_cu_search" class="ant-input" placeholder="@Html.T("customerLookup.searchPlaceholder")" />
+                    <span class="ant-input-suffix" id="ct_cu_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+                </div>
+                <div id="ct_cu_error"></div>
+                <div class="ant-table-wrap">
+                    <table class="ant-table">
+                        <thead>
+                            <tr>
+                                <th>@Html.T("user.fullName")</th>
+                                <th>@Html.T("user.email")</th>
+                                <th style="width:140px">@Html.T("customerLookup.phone")</th>
+                                <th style="width:160px">@Html.T("user.createdAt")</th>
+                                <th class="text-right" style="width:100px">@Html.T("common.actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ct_cu_rows"></tbody>
+                    </table>
+                </div>
+                <div class="ant-pagination" id="ct_cu_pager"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="ct_scan_modal">
+    <div class="ant-modal" style="max-width:520px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title">@Html.T("boxOffice.scanQr")</span>
+            <button type="button" class="ant-modal-close" data-close="ct_scan_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body" id="ct_scan_body"></div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="ct_print_modal">
+    <div class="ant-modal" style="max-width:640px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title">@Html.T("boxOffice.printTickets")</span>
+            <button type="button" class="ant-modal-close" data-close="ct_print_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body" id="ct_print_body"></div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="ct_print_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="ct_print_go">
+                <span class="anticon">@Html.Raw(Icons.Get("Printer"))</span>@Html.T("boxOffice.print")
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="ant-drawer-mask" id="ct_cu_mask"></div>
+<aside class="ant-drawer" id="ct_cu_drawer" style="width:640px" aria-hidden="true">
+    <div class="ant-drawer-header">
+        <span class="text-sm font-semibold text-white">@Html.T("customerLookup.detailTitle")</span>
+        <button type="button" class="ant-btn ant-btn-text ant-btn-icon" id="ct_cu_close" aria-label="@Html.T("x.drawerClose")"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+    </div>
+    <div class="ant-drawer-body" id="ct_cu_body"></div>
+</aside>
+
+@section Scripts {
+    <script src="/vendor/jsQR.js"></script>
+    <script src="/js/counter.js"></script>
+}
