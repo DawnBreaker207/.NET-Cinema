@@ -1,0 +1,120 @@
+@* Monitoring page (React: features/monitoring/MonitoringPage + audit/batch tabs) *@
+@{
+    ViewData["Title"] = Html.T("menu.monitoring").ToString();
+}
+<div id="cp-monitoring">
+    <div class="cp-page-head">
+        <h1 class="cp-page-title">@Html.T("menu.monitoring")</h1>
+    </div>
+
+    <div class="ant-tabs" id="mn_tabs" data-initial="auditLogs">
+        <div class="ant-tabs-nav">
+            <button type="button" class="ant-tabs-tab active" data-tab="auditLogs">@Html.T("menu.auditLogs")</button>
+            <button type="button" class="ant-tabs-tab" data-tab="batchJobs">@Html.T("menu.batchJobs")</button>
+        </div>
+        <div class="ant-tabs-content">
+            <div class="ant-tabs-tabpane active" data-tab="auditLogs">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div style="width:180px">
+                        <input id="au_resource" class="ant-input" placeholder="@Html.T("audit.resourceId")" />
+                    </div>
+                    <div style="width:180px">
+                        <input id="au_booking" class="ant-input" placeholder="@Html.T("audit.bookingId")" />
+                    </div>
+                    <div style="width:180px">
+                        <input id="au_actor" class="ant-input" placeholder="@Html.T("audit.actor")" />
+                    </div>
+                    <div style="width:240px">
+                        <select id="au_action" class="ant-input">
+                            <option value="">@Html.T("audit.action")</option>
+                        </select>
+                    </div>
+                    <div style="width:170px">
+                        <select id="au_rtype" class="ant-input">
+                            <option value="">@Html.T("audit.resourceType")</option>
+                        </select>
+                    </div>
+                    <div style="width:150px">
+                        <select id="au_outcome" class="ant-input">
+                            <option value="">@Html.T("audit.outcome")</option>
+                            <option value="success">@Html.T("audit.outcome_success")</option>
+                            <option value="failure">@Html.T("audit.outcome_failure")</option>
+                        </select>
+                    </div>
+                    <div class="ant-input ant-date-range" style="height:32px;width:330px">
+                        <span class="ant-date-shell" style="width:118px">
+                            <input id="au_from" type="date" required />
+                            <span class="ant-date-ph">@Html.T("x.fromDate")</span>
+                        </span>
+                        <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+                        <span class="ant-date-shell" style="width:118px">
+                            <input id="au_to" type="date" required />
+                            <span class="ant-date-ph">@Html.T("x.toDate")</span>
+                        </span>
+                        <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+                    </div>
+                </div>
+                <div id="au_error"></div>
+                <div class="ant-table-wrap">
+                    <table class="ant-table" style="min-width:1300px">
+                        <thead>
+                            <tr>
+                                <th style="width:160px">@Html.T("audit.createdAt")</th>
+                                <th style="width:200px">@Html.T("audit.action")</th>
+                                <th style="width:160px">@Html.T("audit.resource")</th>
+                                <th style="width:140px">@Html.T("audit.bookingId")</th>
+                                <th style="width:160px">@Html.T("audit.actor")</th>
+                                <th style="width:110px">@Html.T("audit.outcome")</th>
+                                <th class="text-right" style="width:100px">@Html.T("common.actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="au_rows"></tbody>
+                    </table>
+                </div>
+                <div class="ant-pagination" id="au_pager"></div>
+            </div>
+            <div class="ant-tabs-tabpane" data-tab="batchJobs">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div class="ant-input-affix ant-input-search" style="width:260px">
+                        <input id="bj_search" class="ant-input" placeholder="@Html.T("batch.searchPlaceholder")" />
+                        <span class="ant-input-suffix" id="bj_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+                    </div>
+                </div>
+                <div class="mb-4 flex flex-wrap items-center gap-3" id="bj_runs"></div>
+                <div id="bj_error"></div>
+                <div class="ant-table-wrap">
+                    <table class="ant-table" style="min-width:1100px">
+                        <thead>
+                            <tr>
+                                <th style="width:180px">@Html.T("batch.jobName")</th>
+                                <th style="width:110px">@Html.T("batch.status")</th>
+                                <th style="width:110px">@Html.T("batch.triggeredBy")</th>
+                                <th class="text-right" style="width:110px">@Html.T("batch.processedRows")</th>
+                                <th class="text-right" style="width:110px">@Html.T("batch.skippedRows")</th>
+                                <th style="width:160px">@Html.T("batch.startedAt")</th>
+                                <th style="width:160px">@Html.T("batch.finishedAt")</th>
+                                <th>@Html.T("batch.errorMessage")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bj_rows"></tbody>
+                    </table>
+                </div>
+                <div class="ant-pagination" id="bj_pager"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="au_modal">
+    <div class="ant-modal" style="max-width:720px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title">@Html.T("audit.viewDetail")</span>
+            <button type="button" class="ant-modal-close" data-close="au_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body" id="au_d_body"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="/js/monitoring.js"></script>
+}
