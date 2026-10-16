@@ -1,0 +1,6 @@
+# CI only: run via `run --build`.
+services:
+  frontend-test:
+    build:
+      context: .
+      target: test
