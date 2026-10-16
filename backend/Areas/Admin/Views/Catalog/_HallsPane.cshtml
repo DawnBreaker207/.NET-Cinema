@@ -1,0 +1,108 @@
+@* Halls tab (React: features/hall/HallsPage + HallCard + HallSeatPanel) *@
+<div class="mb-4 flex items-center gap-3">
+    <div class="ant-input-affix ant-input-search" style="max-width:280px;width:100%">
+        <input id="hl_search" class="ant-input" placeholder="@Html.T("hall.searchPlaceholder")" />
+        <span class="ant-input-suffix"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+    </div>
+    <button type="button" class="ant-btn ant-btn-primary" id="hl_new">
+        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+    </button>
+</div>
+<div id="hl_cards" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+<div class="ant-pagination" id="hl_pager"></div>
+
+<div id="hl_panel" class="mt-5 hidden">
+    <div class="ant-card">
+        <div class="ant-card-head flex items-center gap-2">
+            <span id="hl_panel_title" class="min-w-0 truncate"></span>
+            <button type="button" class="ant-btn ant-btn-icon ant-btn-text shrink-0" id="hl_edit" title="@Html.T("hall.editMode")">
+                <span class="anticon">@Html.Raw(Icons.Get("Edit"))</span>
+            </button>
+            <span class="relative ml-auto shrink-0">
+                <button type="button" class="ant-btn ant-btn-icon" id="hl_kebab" data-dropdown="hl_menu" aria-label="menu">
+                    <span class="anticon" style="transform:rotate(90deg)">@Html.Raw(Icons.Get("More"))</span>
+                </button>
+                <div class="cp-dropdown" id="hl_menu" style="min-width:200px">
+                    <a class="cp-dropdown-item" data-menu="add-row"><span class="anticon">@Html.Raw(Icons.Get("PlusCircle"))</span>@Html.T("hall.addRow")</a>
+                    <a class="cp-dropdown-item" data-menu="add-column"><span class="anticon">@Html.Raw(Icons.Get("PlusCircle"))</span>@Html.T("hall.addColumn")</a>
+                    <a class="cp-dropdown-item" data-menu="delete-row"><span class="anticon">@Html.Raw(Icons.Get("MinusCircle"))</span>@Html.T("hall.deleteRow")</a>
+                    <div class="cp-dropdown-divider"></div>
+                    <a class="cp-dropdown-item" data-menu="regenerate"><span class="anticon">@Html.Raw(Icons.Get("Sync"))</span>@Html.T("hall.regenerate")</a>
+                </div>
+            </span>
+        </div>
+        <div class="ant-card-body">
+            <div id="hl_tag" class="mb-3"></div>
+            <div id="hl_summary" class="text-sm text-[var(--text-2)]"></div>
+            <div id="hl_pills" class="mt-3 flex flex-wrap items-center gap-2"></div>
+            <div class="mt-6 flex flex-col items-center">
+                <div class="h-1.5 w-2/5 rounded-full" style="background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.35),rgba(255,255,255,.04))"></div>
+                <div class="mt-2 text-xs text-[var(--text-3)]">@Html.T("hall.screen")</div>
+            </div>
+            <div id="hl_grid" class="mt-6 flex justify-center overflow-x-auto"></div>
+            <div id="hl_editbar" class="mt-4 hidden flex-wrap items-center gap-2 border-t border-[var(--border-2)] pt-4">
+                <span class="text-sm text-[var(--text-2)]" id="hl_sel_count"></span>
+                <button type="button" class="ant-btn ant-btn-sm" data-edit="select-all">@Html.T("hall.selectAll")</button>
+                <span id="hl_type_wrap" class="inline-flex"></span>
+                <button type="button" class="ant-btn ant-btn-sm" data-edit="merge">@Html.T("x.mergeCoupleCta")</button>
+                <button type="button" class="ant-btn ant-btn-sm" data-edit="split">@Html.T("hall.splitCouple")</button>
+                <button type="button" class="ant-btn ant-btn-sm" data-edit="to-gap">@Html.T("hall.markAsGap")</button>
+                <button type="button" class="ant-btn ant-btn-sm" data-edit="to-seat">@Html.T("hall.markAsSeat")</button>
+                <button type="button" class="ant-btn ant-btn-sm" data-edit="clear">@Html.T("hall.clearSelection")</button>
+                <span class="ml-auto flex items-center gap-2">
+                    <button type="button" class="ant-btn" data-edit="discard">@Html.T("hall.discardChanges")</button>
+                    <button type="button" class="ant-btn ant-btn-primary" data-edit="save">
+                        <span class="anticon">@Html.Raw(Icons.Get("Save"))</span>@Html.T("hall.saveChanges")
+                    </button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="hl_create_modal">
+    <div class="ant-modal" style="max-width:560px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title">@Html.T("hall.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="hl_create_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("hall.name")</label>
+                <input id="hc_name" class="ant-input" placeholder="@Html.T("hall.namePlaceholder")" />
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("hall.template")</label>
+                <select id="hc_tpl" class="ant-input">
+                    <option value="small">@Html.T("hall.template_small")</option>
+                    <option value="medium" selected>@Html.T("hall.template_medium")</option>
+                    <option value="large">@Html.T("hall.template_large")</option>
+                </select>
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("hall.templateHint")</div>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="hl_create_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="hc_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="hl_clone_modal">
+    <div class="ant-modal" style="max-width:480px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="hcl_title">@Html.T("hall.clone")</span>
+            <button type="button" class="ant-modal-close" data-close="hl_clone_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("hall.name")</label>
+                <input id="hcl_name" class="ant-input" />
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="hl_clone_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="hcl_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>

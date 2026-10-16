@@ -1,0 +1,87 @@
+@* Showtimes tab (React: features/showtime/ShowtimesPage + ShowtimeFormModal) *@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    <button type="button" class="ant-btn ant-btn-primary" id="st_new">
+        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+    </button>
+    <div style="width:210px">
+        <select id="st_movie" class="ant-input">
+            <option value="">@Html.T("showtime.filterMovie")</option>
+        </select>
+    </div>
+    <div style="width:170px">
+        <select id="st_hall" class="ant-input">
+            <option value="">@Html.T("showtime.filterHall")</option>
+        </select>
+    </div>
+    <div style="width:160px">
+        <select id="st_status" class="ant-input">
+            <option value="">@Html.T("showtime.filterStatus")</option>
+            <option value="open">@Html.T("showtime.statusOpen")</option>
+            <option value="closed">@Html.T("showtime.statusClosed")</option>
+        </select>
+    </div>
+    <div class="ant-input ant-date-range" style="height:32px;width:330px">
+        <span class="ant-date-shell" style="width:118px">
+            <input id="st_from" type="date" required />
+            <span class="ant-date-ph">@Html.T("x.fromDate")</span>
+        </span>
+        <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+        <span class="ant-date-shell" style="width:118px">
+            <input id="st_to" type="date" required />
+            <span class="ant-date-ph">@Html.T("x.toDate")</span>
+        </span>
+        <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+    </div>
+</div>
+<div class="ant-table-wrap">
+    <table class="ant-table">
+        <thead>
+            <tr>
+                <th>@Html.T("showtime.movie")</th>
+                <th>@Html.T("showtime.hall")</th>
+                <th>@Html.T("showtime.startAt")</th>
+                <th>@Html.T("showtime.endAt")</th>
+                <th>@Html.T("showtime.status")</th>
+                <th style="width:130px">@Html.T("common.actions")</th>
+            </tr>
+        </thead>
+        <tbody id="st_rows"></tbody>
+    </table>
+</div>
+<div class="ant-pagination" id="st_pager"></div>
+
+<div class="ant-modal-mask" id="st_modal">
+    <div class="ant-modal" style="max-width:560px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="st_modal_title">@Html.T("showtime.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="st_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <input type="hidden" id="st_id" />
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("showtime.movie")</label>
+                <select id="st_f_movie" class="ant-input"></select>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("showtime.hall")</label>
+                <select id="st_f_hall" class="ant-input"></select>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("showtime.startAt")</label>
+                <input id="st_f_start" class="ant-input" type="datetime-local" />
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("showtime.startAtHint")</div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("showtime.status")</label>
+                <select id="st_f_status" class="ant-input">
+                    <option value="open">@Html.T("showtime.statusOpen")</option>
+                    <option value="closed">@Html.T("showtime.statusClosed")</option>
+                </select>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="st_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="st_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>

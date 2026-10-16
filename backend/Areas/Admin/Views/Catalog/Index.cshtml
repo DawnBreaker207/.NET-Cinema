@@ -1,0 +1,36 @@
+@{
+    ViewData["Title"] = "Danh mục";
+    var tab = (ViewData["Tab"] as string) ?? "movies";
+    string Act(string k) => tab == k ? "active" : "";
+    string Pane(string k) => tab == k ? "ant-tabs-tabpane active" : "ant-tabs-tabpane";
+}
+<div class="cp-page-head">
+    <h1 class="cp-page-title">@Html.T("menu.catalog")</h1>
+</div>
+
+<div class="ant-tabs" id="catalog-tabs" data-initial="@tab">
+    <div class="ant-tabs-nav">
+        <button type="button" class="ant-tabs-tab @Act("movies")" data-tab="movies">@Html.T("menu.movies")</button>
+        <button type="button" class="ant-tabs-tab @Act("halls")" data-tab="halls">@Html.T("menu.halls")</button>
+        <button type="button" class="ant-tabs-tab @Act("showtimes")" data-tab="showtimes">@Html.T("menu.showtimes")</button>
+        <button type="button" class="ant-tabs-tab @Act("concessions")" data-tab="concessions">@Html.T("menu.concessions")</button>
+    </div>
+    <div class="ant-tabs-content">
+        <div class="@Pane("movies")" data-tab="movies">
+            @await Html.PartialAsync("_MoviesPane")
+        </div>
+        <div class="@Pane("halls")" data-tab="halls">
+            @await Html.PartialAsync("_HallsPane")
+        </div>
+        <div class="@Pane("showtimes")" data-tab="showtimes">
+            @await Html.PartialAsync("_ShowtimesPane")
+        </div>
+        <div class="@Pane("concessions")" data-tab="concessions">
+            @await Html.PartialAsync("_ConcessionsPane")
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="/js/catalog.js"></script>
+}

@@ -1,0 +1,78 @@
+@* Concessions tab (React: features/concession/ConcessionsPage + form modal) *@
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    <div class="ant-input-affix ant-input-search" style="max-width:300px;width:100%">
+        <input id="cc_search" class="ant-input" placeholder="@Html.T("concession.searchPlaceholder")" />
+        <span class="ant-input-suffix"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+    </div>
+    <button type="button" class="ant-btn ant-btn-primary" id="cc_new">
+        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+    </button>
+    <select id="cc_active" class="ant-input" style="width:190px">
+        <option value="">@Html.T("concession.filterAll")</option>
+        <option value="true">@Html.T("concession.onSale")</option>
+        <option value="false">@Html.T("concession.offSale")</option>
+    </select>
+</div>
+<div class="ant-alert ant-alert-info" id="cc_alert">
+    <span class="anticon ant-alert-icon">@Html.Raw(Icons.Get("InfoCircleFilled"))</span>
+    <span class="flex-1">@Html.T("concession.scopeHint")</span>
+    <button type="button" class="ant-alert-close" aria-label="Close"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+</div>
+<div class="ant-table-wrap">
+    <table class="ant-table">
+        <thead>
+            <tr>
+                <th>@Html.T("concession.product")</th>
+                <th style="width:180px">@Html.T("concession.price")</th>
+                <th style="width:160px">@Html.T("concession.status")</th>
+                <th style="width:130px">@Html.T("common.actions")</th>
+            </tr>
+        </thead>
+        <tbody id="cc_rows"></tbody>
+    </table>
+</div>
+<div class="ant-pagination" id="cc_pager"></div>
+
+<div class="ant-modal-mask" id="cc_modal">
+    <div class="ant-modal" style="max-width:600px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="cc_modal_title">@Html.T("concession.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="cc_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <input type="hidden" id="cc_id" />
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("concession.name")</label>
+                <input id="cc_name" class="ant-input" />
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("concession.price")</label>
+                <input id="cc_price" class="ant-input" type="number" min="0" step="1000" />
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("concession.priceHint")</div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("concession.imageUrl")</label>
+                <div class="flex items-center gap-2">
+                    <input id="cc_image" class="ant-input" />
+                    <label class="ant-btn shrink-0" style="cursor:pointer">
+                        <span class="anticon">@Html.Raw(Icons.Get("Upload"))</span>@Html.T("concession.imageUpload")
+                        <input type="file" id="cc_image_file" accept=".jpg,.jpeg,.png,.webp" style="display:none" />
+                    </label>
+                </div>
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("concession.imageUrlHint")</div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("concession.description")</label>
+                <textarea id="cc_desc" class="ant-input" rows="3"></textarea>
+            </div>
+            <div class="ant-form-item mb-0 mt-5 flex items-center gap-3">
+                <span class="ant-switch" id="cc_active_sw"><span class="ant-switch-dot"></span></span>
+                <span>@Html.T("concession.onSale")</span>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="cc_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="cc_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,119 @@
+@* Movies tab (React: features/movie/MoviesPage + MovieFormModal) *@
+<div class="mb-4 flex items-center gap-3">
+    <div class="ant-input-affix ant-input-search" style="max-width:320px;width:100%">
+        <input id="mv_search" class="ant-input" placeholder="@Html.T("movie.searchPlaceholder")" />
+        <span class="ant-input-suffix"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+    </div>
+    <button type="button" class="ant-btn ant-btn-primary" id="mv_new">
+        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+    </button>
+</div>
+<div class="ant-table-wrap">
+    <table class="ant-table">
+        <thead>
+            <tr>
+                <th style="width:72px">@Html.T("movie.cover")</th>
+                <th>@Html.T("movie.name")</th>
+                <th>@Html.T("movie.genre")</th>
+                <th>@Html.T("movie.duration")</th>
+                <th>@Html.T("movie.director")</th>
+                <th>@Html.T("movie.releaseDate")</th>
+                <th>@Html.T("movie.status")</th>
+                <th style="width:120px">@Html.T("common.actions")</th>
+            </tr>
+        </thead>
+        <tbody id="mv_rows"></tbody>
+    </table>
+</div>
+<div class="ant-pagination" id="mv_pager"></div>
+
+<div class="ant-modal-mask" id="mv_modal">
+    <div class="ant-modal" style="max-width:760px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="mv_modal_title">@Html.T("movie.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="mv_modal" aria-label="Close">
+                <span class="anticon">@Html.Raw(Icons.Get("Close"))</span>
+            </button>
+        </div>
+        <div class="ant-modal-body">
+            <input type="hidden" id="mv_id" />
+            <div class="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label required">@Html.T("movie.name")</label>
+                    <input id="mv_title" class="ant-input" />
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label required">@Html.T("movie.genre")</label>
+                    <input id="mv_genre" class="ant-input" />
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label required">@Html.T("movie.duration")</label>
+                    <input id="mv_duration" class="ant-input" type="number" min="1" placeholder="@Html.T("common.minutes")" />
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label required">@Html.T("movie.director")</label>
+                    <input id="mv_director" class="ant-input" />
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label">@Html.T("movie.ageRating")</label>
+                    <select id="mv_age" class="ant-input">
+                        <option>P</option><option>K</option><option>T13</option><option>T16</option><option>T18</option>
+                    </select>
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label">@Html.T("movie.status")</label>
+                    <select id="mv_status" class="ant-input">
+                        <option value="draft">@Html.T("movie.statusDraft")</option>
+                        <option value="coming_soon">@Html.T("movie.statusComing_soon")</option>
+                        <option value="showing">@Html.T("movie.statusShowing")</option>
+                        <option value="ended">@Html.T("movie.statusEnded")</option>
+                    </select>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("movie.statusHint")</div>
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label">@Html.T("movie.releaseDate")</label>
+                    <input id="mv_release" class="ant-input" type="date" />
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label">@Html.T("movie.cast")</label>
+                    <input id="mv_cast" class="ant-input" />
+                </div>
+                <div class="ant-form-item mb-0 sm:col-span-2">
+                    <label class="ant-form-item-label">@Html.T("movie.posterUrl")</label>
+                    <div class="flex items-center gap-2">
+                        <input id="mv_poster" class="ant-input" />
+                        <label class="ant-btn shrink-0" style="cursor:pointer">
+                            <span class="anticon">@Html.Raw(Icons.Get("Upload"))</span>@Html.T("movie.posterUpload")
+                            <input type="file" id="mv_poster_file" accept=".jpg,.jpeg,.png,.webp" style="display:none" />
+                        </label>
+                    </div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("movie.posterUploadHint")</div>
+                </div>
+                <div class="ant-form-item mb-0 sm:col-span-2">
+                    <label class="ant-form-item-label">@Html.T("movie.backdropUrl")</label>
+                    <div class="flex items-center gap-2">
+                        <input id="mv_backdrop" class="ant-input" />
+                        <label class="ant-btn shrink-0" style="cursor:pointer">
+                            <span class="anticon">@Html.Raw(Icons.Get("Upload"))</span>@Html.T("movie.posterUpload")
+                            <input type="file" id="mv_backdrop_file" accept=".jpg,.jpeg,.png,.webp" style="display:none" />
+                        </label>
+                    </div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("movie.backdropUploadHint")</div>
+                </div>
+                <div class="ant-form-item mb-0 sm:col-span-2">
+                    <label class="ant-form-item-label">@Html.T("movie.trailerUrl")</label>
+                    <input id="mv_trailer" class="ant-input" />
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("movie.trailerUrlHint")</div>
+                </div>
+                <div class="ant-form-item mb-0 sm:col-span-2">
+                    <label class="ant-form-item-label">@Html.T("movie.description")</label>
+                    <textarea id="mv_desc" class="ant-input" rows="3"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="mv_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="mv_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>
