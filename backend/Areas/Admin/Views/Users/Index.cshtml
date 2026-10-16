@@ -1,0 +1,108 @@
+@* Users page (React: features/user/UsersPage + UserFormModal) *@
+@{
+    ViewData["Title"] = Html.T("user.title").ToString();
+    var uid = User.FindFirst("uid")?.Value ?? "";
+}
+<div id="cp-users" data-uid="@uid">
+    <div class="cp-page-head flex flex-wrap items-center justify-between gap-3">
+        <h1 class="cp-page-title">@Html.T("user.title")</h1>
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="ant-input-affix ant-input-search" style="width:300px">
+                <input id="us_search" class="ant-input" placeholder="@Html.T("user.searchPlaceholder")" />
+                <span class="ant-input-suffix" id="us_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+            </div>
+            <button type="button" class="ant-btn ant-btn-primary" id="us_new">
+                <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+            </button>
+        </div>
+    </div>
+
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+        <div style="width:170px">
+            <select id="us_role" class="ant-input">
+                <option value="">@Html.T("user.role")</option>
+                <option value="customer">@Html.T("user.role_customer")</option>
+                <option value="staff">@Html.T("user.role_staff")</option>
+                <option value="admin">@Html.T("user.role_admin")</option>
+            </select>
+        </div>
+        <div style="width:190px">
+            <select id="us_active" class="ant-input">
+                <option value="all">@Html.T("user.filterAll")</option>
+                <option value="active">@Html.T("user.statusActive")</option>
+                <option value="locked">@Html.T("user.statusLocked")</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="ant-alert ant-alert-info" id="us_hint">
+        <span class="ant-alert-icon anticon">@Html.Raw(Icons.Get("InfoCircleFilled"))</span>
+        <div class="flex-1">@Html.T("user.guardsHint")</div>
+        <button type="button" class="ant-alert-close anticon" data-close-alert>@Html.Raw(Icons.Get("Close"))</button>
+    </div>
+    <div id="us_error"></div>
+
+    <div class="ant-table-wrap">
+        <table class="ant-table" style="min-width:900px">
+            <thead>
+                <tr>
+                    <th>@Html.T("user.account")</th>
+                    <th style="width:190px">@Html.T("user.role")</th>
+                    <th style="width:150px">@Html.T("user.status")</th>
+                    <th style="width:160px">@Html.T("user.createdAt")</th>
+                </tr>
+            </thead>
+            <tbody id="us_rows"></tbody>
+        </table>
+    </div>
+    <div class="ant-pagination" id="us_pager"></div>
+</div>
+
+<div class="ant-modal-mask" id="us_modal">
+    <div class="ant-modal" style="max-width:520px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title">@Html.T("user.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="us_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <div class="ant-alert ant-alert-info">
+                <span class="ant-alert-icon anticon">@Html.Raw(Icons.Get("InfoCircleFilled"))</span>
+                <div class="flex-1">@Html.T("user.createScopeNote")</div>
+            </div>
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("user.email")</label>
+                <input id="us_f_email" class="ant-input" autocomplete="off" />
+                <div class="ant-form-item-explain" id="us_e_email" style="display:none"></div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("user.fullName")</label>
+                <input id="us_f_name" class="ant-input" />
+                <div class="ant-form-item-explain" id="us_e_name" style="display:none"></div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("user.password")</label>
+                <div class="ant-input-affix">
+                    <input id="us_f_pass" class="ant-input" type="password" autocomplete="new-password" />
+                    <span class="ant-input-suffix" id="us_pass_eye"><span class="anticon">@Html.Raw(Icons.Get("EyeInvisible"))</span></span>
+                </div>
+                <div class="ant-form-item-explain" id="us_e_password" style="display:none"></div>
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("user.passwordHint")</div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("user.role")</label>
+                <select id="us_f_role" class="ant-input">
+                    <option value="staff">@Html.T("user.role_staff")</option>
+                    <option value="admin">@Html.T("user.role_admin")</option>
+                </select>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="us_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="us_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="/js/users.js"></script>
+}
