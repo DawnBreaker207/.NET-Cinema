@@ -1,0 +1,157 @@
+@* Pricing page (React: features/pricing/PricingPage + BasePriceForm + PricingRuleFormModal) *@
+@{
+    ViewData["Title"] = Html.T("pricing.title").ToString();
+}
+<div id="cp-pricing">
+    <div class="cp-page-head">
+        <h1 class="cp-page-title">@Html.T("pricing.title")</h1>
+    </div>
+
+    <div style="max-width:720px;margin-bottom:24px" id="pr_base_wrap">
+        <div id="pr_base_error"></div>
+        <div id="pr_base_fields" style="display:none">
+            <div class="flex flex-wrap" style="gap:16px">
+                @foreach (var seat in new[] { "standard", "vip", "couple", "recliner" })
+                {
+                    <div class="ant-form-item" style="flex:1 1 150px;margin-bottom:8px">
+                        <label class="ant-form-item-label required">@Html.T($"hall.seatType_{seat}")</label>
+                        <input class="ant-input pr-base-price" data-seat="@seat" inputmode="numeric" />
+                        <div class="ant-form-item-explain" id="pr_e_@seat" style="display:none"></div>
+                    </div>
+                }
+            </div>
+            <div class="ant-form-item" style="margin-bottom:0">
+                <button type="button" class="ant-btn ant-btn-primary" id="pr_base_save">@Html.T("common.save")</button>
+            </div>
+        </div>
+        <div id="pr_base_loading"><span class="ant-spin"></span></div>
+    </div>
+
+    <div class="ant-divider"></div>
+
+    <div class="cp-page-head flex flex-wrap items-center justify-between gap-3">
+        <h1 class="cp-page-title">@Html.T("pricing.rulesTitle")</h1>
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="ant-input-affix ant-input-search" style="width:280px">
+                <input id="pr_search" class="ant-input" placeholder="@Html.T("pricing.searchPlaceholder")" />
+                <span class="ant-input-suffix" id="pr_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+            </div>
+            <button type="button" class="ant-btn ant-btn-primary" id="pr_new">
+                <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+            </button>
+        </div>
+    </div>
+
+    <div id="pr_error"></div>
+
+    <div class="ant-table-wrap">
+        <table class="ant-table" style="min-width:1000px">
+            <thead>
+                <tr>
+                    <th>@Html.T("pricing.ruleName")</th>
+                    <th style="width:120px">@Html.T("pricing.dayOfWeek")</th>
+                    <th style="width:140px">@Html.T("pricing.timeWindow")</th>
+                    <th style="width:130px">@Html.T("pricing.specificDate")</th>
+                    <th style="width:150px">@Html.T("pricing.adjustment")</th>
+                    <th class="text-right" style="width:90px">@Html.T("pricing.priority")</th>
+                    <th style="width:120px">@Html.T("pricing.status")</th>
+                    <th style="width:150px">@Html.T("common.actions")</th>
+                </tr>
+            </thead>
+            <tbody id="pr_rows"></tbody>
+        </table>
+    </div>
+    <div class="ant-pagination" id="pr_pager"></div>
+</div>
+
+<div class="ant-modal-mask" id="pr_modal">
+    <div class="ant-modal" style="max-width:640px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="pr_modal_title">@Html.T("pricing.createRuleTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="pr_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("pricing.ruleName")</label>
+                <input id="pr_f_name" class="ant-input" />
+                <div class="ant-form-item-explain" id="pr_e_name" style="display:none"></div>
+            </div>
+            <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label">@Html.T("pricing.dayOfWeek")</label>
+                    <select id="pr_f_dow" class="ant-input">
+                        <option value="">@Html.T("pricing.dayOfWeekAny")</option>
+                        <option value="0">@Html.T("pricing.dow_0")</option>
+                        <option value="1">@Html.T("pricing.dow_1")</option>
+                        <option value="2">@Html.T("pricing.dow_2")</option>
+                        <option value="3">@Html.T("pricing.dow_3")</option>
+                        <option value="4">@Html.T("pricing.dow_4")</option>
+                        <option value="5">@Html.T("pricing.dow_5")</option>
+                        <option value="6">@Html.T("pricing.dow_6")</option>
+                    </select>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("pricing.dayOfWeekHint")</div>
+                </div>
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label">@Html.T("pricing.specificDate")</label>
+                    <div class="ant-input ant-date-range" style="height:32px">
+                        <span class="ant-date-shell" style="flex:1">
+                            <input id="pr_f_date" type="date" required />
+                            <span class="ant-date-ph">@Html.T("x.datePlaceholder")</span>
+                        </span>
+                        <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+                    </div>
+                    <div class="ant-form-item-explain" id="pr_e_date" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("pricing.specificDateHint")</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label">@Html.T("pricing.timeWindow")</label>
+                    <div class="ant-input ant-date-range" style="height:32px">
+                        <span class="ant-date-shell" style="flex:1">
+                            <input id="pr_f_t0" type="time" required />
+                            <span class="ant-date-ph">@Html.T("x.startTime")</span>
+                        </span>
+                        <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+                        <span class="ant-date-shell" style="flex:1">
+                            <input id="pr_f_t1" type="time" required />
+                            <span class="ant-date-ph">@Html.T("x.endTime")</span>
+                        </span>
+                        <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("ClockCircle"))</span>
+                    </div>
+                    <div class="ant-form-item-explain" id="pr_e_time" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("pricing.timeWindowHint")</div>
+                </div>
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label required">@Html.T("pricing.priority")</label>
+                    <input id="pr_f_priority" class="ant-input" type="number" min="0" />
+                    <div class="ant-form-item-explain" id="pr_e_priority" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("pricing.priorityHint")</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label required">@Html.T("pricing.adjustKind")</label>
+                    <select id="pr_f_kind" class="ant-input">
+                        <option value="percent">@Html.T("pricing.adjustKind_percent")</option>
+                        <option value="fixed">@Html.T("pricing.adjustKind_fixed")</option>
+                    </select>
+                </div>
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label required">@Html.T("pricing.adjustValue")</label>
+                    <input id="pr_f_value" class="ant-input" type="number" />
+                    <div class="ant-form-item-explain" id="pr_e_value" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("pricing.adjustValueHint")</div>
+                </div>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="pr_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="pr_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="/js/pricing.js"></script>
+}
