@@ -1,0 +1,90 @@
+@* Bookings page (React: features/booking/BookingsPage + OrderDetailDrawer) *@
+@{
+    ViewData["Title"] = Html.T("booking.title").ToString();
+}
+<div id="cp-bookings">
+    <div class="cp-page-head flex flex-wrap items-center justify-between gap-3">
+        <h1 class="cp-page-title">@Html.T("booking.title")</h1>
+        <div class="ant-input-affix ant-input-search" style="width:320px">
+            <input id="bk_search" class="ant-input" placeholder="@Html.T("booking.searchPlaceholder")" />
+            <span class="ant-input-suffix" id="bk_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+        </div>
+    </div>
+
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+        <div style="width:160px">
+            <select id="bk_status" class="ant-input">
+                <option value="">@Html.T("booking.status")</option>
+                <option value="pending">@Html.T("booking.status_pending")</option>
+                <option value="confirmed">@Html.T("booking.status_confirmed")</option>
+                <option value="expired">@Html.T("booking.status_expired")</option>
+                <option value="refunded">@Html.T("booking.status_refunded")</option>
+            </select>
+        </div>
+        <div style="width:190px">
+            <select id="bk_payment" class="ant-input">
+                <option value="">@Html.T("booking.paymentStatus")</option>
+                <option value="pending">@Html.T("booking.payment_pending")</option>
+                <option value="paid">@Html.T("booking.payment_paid")</option>
+                <option value="failed">@Html.T("booking.payment_failed")</option>
+                <option value="refund_pending">@Html.T("booking.payment_refund_pending")</option>
+                <option value="refunded">@Html.T("booking.payment_refunded")</option>
+            </select>
+        </div>
+        <div style="width:150px">
+            <select id="bk_via" class="ant-input">
+                <option value="">@Html.T("booking.soldVia")</option>
+                <option value="online">@Html.T("booking.soldVia_online")</option>
+                <option value="counter">@Html.T("booking.soldVia_counter")</option>
+            </select>
+        </div>
+        <div class="ant-input ant-date-range" style="height:32px;width:330px">
+            <span class="ant-date-shell" style="width:118px">
+                <input id="bk_from" type="date" required />
+                <span class="ant-date-ph">@Html.T("x.fromDate")</span>
+            </span>
+            <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+            <span class="ant-date-shell" style="width:118px">
+                <input id="bk_to" type="date" required />
+                <span class="ant-date-ph">@Html.T("x.toDate")</span>
+            </span>
+            <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+        </div>
+    </div>
+
+    <div id="bk_payhint"></div>
+    <div id="bk_error"></div>
+
+    <div class="ant-table-wrap">
+        <table class="ant-table" style="min-width:1200px">
+            <thead>
+                <tr>
+                    <th>@Html.T("booking.customer")</th>
+                    <th>@Html.T("showtime.movie")</th>
+                    <th class="text-right" style="width:80px">@Html.T("booking.seats")</th>
+                    <th class="text-right" style="width:150px">@Html.T("booking.total")</th>
+                    <th style="width:110px">@Html.T("booking.soldVia")</th>
+                    <th style="width:140px">@Html.T("booking.status")</th>
+                    <th style="width:130px">@Html.T("booking.payment")</th>
+                    <th style="width:160px">@Html.T("booking.createdAt")</th>
+                    <th class="text-right" style="width:100px">@Html.T("common.actions")</th>
+                </tr>
+            </thead>
+            <tbody id="bk_rows"></tbody>
+        </table>
+    </div>
+    <div class="ant-pagination" id="bk_pager"></div>
+</div>
+
+<div class="ant-drawer-mask" id="bk_d_mask"></div>
+<aside class="ant-drawer" id="bk_drawer" style="width:620px" aria-hidden="true">
+    <div class="ant-drawer-header">
+        <span class="text-sm font-semibold text-white">@Html.T("booking.detailTitle")</span>
+        <button type="button" class="ant-btn ant-btn-text ant-btn-icon" id="bk_d_close" aria-label="@Html.T("x.drawerClose")"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+    </div>
+    <div class="ant-drawer-body" id="bk_d_body"></div>
+</aside>
+
+@section Scripts {
+    <script src="/js/bookings.js"></script>
+}
