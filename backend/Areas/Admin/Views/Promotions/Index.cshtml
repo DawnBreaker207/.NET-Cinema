@@ -1,0 +1,348 @@
+@* Promotions page (React: features/promotion/PromotionPage + discounts/campaigns/articles tabs) *@
+@{
+    ViewData["Title"] = Html.T("menu.promotions").ToString();
+}
+<div id="cp-promotions">
+    <div class="cp-page-head">
+        <h1 class="cp-page-title">@Html.T("menu.promotions")</h1>
+    </div>
+
+    <div class="ant-tabs" id="pm_tabs" data-initial="discounts">
+        <div class="ant-tabs-nav">
+            <button type="button" class="ant-tabs-tab active" data-tab="discounts">@Html.T("menu.discounts")</button>
+            <button type="button" class="ant-tabs-tab" data-tab="campaigns">@Html.T("menu.campaigns")</button>
+            <button type="button" class="ant-tabs-tab" data-tab="articles">@Html.T("menu.articles")</button>
+        </div>
+        <div class="ant-tabs-content">
+            <div class="ant-tabs-tabpane active" data-tab="discounts">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div class="ant-input-affix ant-input-search" style="width:280px">
+                        <input id="dc_search" class="ant-input" placeholder="@Html.T("discount.searchPlaceholder")" />
+                        <span class="ant-input-suffix" id="dc_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+                    </div>
+                    <button type="button" class="ant-btn ant-btn-primary" id="dc_new">
+                        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+                    </button>
+                    <div style="width:200px">
+                        <select id="dc_active" class="ant-input">
+                            <option value="all">@Html.T("discount.filterAll")</option>
+                            <option value="active">@Html.T("discount.enabled")</option>
+                            <option value="inactive">@Html.T("discount.disabled")</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ant-alert ant-alert-warning" id="dc_warn">
+                    <span class="ant-alert-icon anticon">@Html.Raw(Icons.Get("ExclamationCircleFilled"))</span>
+                    <div class="flex-1">@Html.T("discount.realMoneyHint")</div>
+                    <button type="button" class="ant-alert-close anticon" data-close-alert>@Html.Raw(Icons.Get("Close"))</button>
+                </div>
+                <div id="dc_error"></div>
+                <div class="ant-table-wrap">
+                    <table class="ant-table" style="min-width:1100px">
+                        <thead>
+                            <tr>
+                                <th>@Html.T("discount.code")</th>
+                                <th style="width:230px">@Html.T("discount.rule")</th>
+                                <th class="text-right" style="width:140px">@Html.T("discount.usage")</th>
+                                <th style="width:210px">@Html.T("discount.window")</th>
+                                <th style="width:120px">@Html.T("discount.status")</th>
+                                <th style="width:170px">@Html.T("common.actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dc_rows"></tbody>
+                    </table>
+                </div>
+                <div class="ant-pagination" id="dc_pager"></div>
+            </div>
+            <div class="ant-tabs-tabpane" data-tab="campaigns">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div class="ant-input-affix ant-input-search" style="width:280px">
+                        <input id="cm_search" class="ant-input" placeholder="@Html.T("campaign.searchPlaceholder")" />
+                        <span class="ant-input-suffix" id="cm_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+                    </div>
+                    <button type="button" class="ant-btn ant-btn-primary" id="cm_new">
+                        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+                    </button>
+                    <div style="width:200px">
+                        <select id="cm_active" class="ant-input">
+                            <option value="all">@Html.T("campaign.filterAll")</option>
+                            <option value="active">@Html.T("campaign.enabled")</option>
+                            <option value="inactive">@Html.T("campaign.disabled")</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ant-alert ant-alert-warning" id="cm_warn">
+                    <span class="ant-alert-icon anticon">@Html.Raw(Icons.Get("ExclamationCircleFilled"))</span>
+                    <div class="flex-1">@Html.T("campaign.realMoneyHint")</div>
+                    <button type="button" class="ant-alert-close anticon" data-close-alert>@Html.Raw(Icons.Get("Close"))</button>
+                </div>
+                <div id="cm_error"></div>
+                <div class="ant-table-wrap">
+                    <table class="ant-table" style="min-width:900px">
+                        <thead>
+                            <tr>
+                                <th>@Html.T("campaign.name")</th>
+                                <th style="width:220px">@Html.T("campaign.window")</th>
+                                <th class="text-right" style="width:100px">@Html.T("campaign.perUserLimit")</th>
+                                <th style="width:120px">@Html.T("campaign.status")</th>
+                                <th style="width:200px">@Html.T("common.actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cm_rows"></tbody>
+                    </table>
+                </div>
+                <div class="ant-pagination" id="cm_pager"></div>
+            </div>
+            <div class="ant-tabs-tabpane" data-tab="articles">
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <div class="ant-input-affix ant-input-search" style="width:280px">
+                        <input id="ar_search" class="ant-input" placeholder="@Html.T("article.searchPlaceholder")" />
+                        <span class="ant-input-suffix" id="ar_search_btn"><span class="anticon">@Html.Raw(Icons.Get("Search"))</span></span>
+                    </div>
+                    <button type="button" class="ant-btn ant-btn-primary" id="ar_new">
+                        <span class="anticon">@Html.Raw(Icons.Get("Plus"))</span>@Html.T("common.create")
+                    </button>
+                    <div style="width:200px">
+                        <select id="ar_type" class="ant-input">
+                            <option value="all">@Html.T("article.filterAll")</option>
+                            <option value="news">@Html.T("article.typeNews")</option>
+                            <option value="promotion">@Html.T("article.typePromotion")</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="ar_error"></div>
+                <div class="ant-table-wrap">
+                    <table class="ant-table" style="min-width:900px">
+                        <thead>
+                            <tr>
+                                <th>@Html.T("article.title")</th>
+                                <th style="width:140px">@Html.T("article.status")</th>
+                                <th class="text-right" style="width:100px">@Html.T("article.views")</th>
+                                <th style="width:180px">@Html.T("article.updated")</th>
+                                <th style="width:160px">@Html.T("common.actions")</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ar_rows"></tbody>
+                    </table>
+                </div>
+                <div class="ant-pagination" id="ar_pager"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="dc_modal">
+    <div class="ant-modal" style="max-width:640px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="dc_modal_title">@Html.T("discount.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="dc_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label required">@Html.T("discount.code")</label>
+                    <input id="dc_f_code" class="ant-input" style="text-transform:uppercase" />
+                    <div class="ant-form-item-explain" id="dc_e_code" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]" id="dc_extra_code">@Html.T("discount.codeHint")</div>
+                </div>
+                <div class="ant-form-item mb-0">
+                    <label class="ant-form-item-label required">@Html.T("discount.kind")</label>
+                    <select id="dc_f_kind" class="ant-input">
+                        <option value="percent">@Html.T("discount.kind_percent")</option>
+                        <option value="amount">@Html.T("discount.kind_amount")</option>
+                    </select>
+                    <div class="mt-1 text-xs text-[var(--text-3)]" id="dc_extra_kind" style="display:none">@Html.T("discount.kindLocked")</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label required" id="dc_lb_value">@Html.T("discount.valuePercent")</label>
+                    <input id="dc_f_value" class="ant-input" type="number" min="1" />
+                    <div class="ant-form-item-explain" id="dc_e_value" style="display:none"></div>
+                </div>
+                <div class="ant-form-item mb-0 mt-5" id="dc_w_max">
+                    <label class="ant-form-item-label">@Html.T("discount.maxDiscount")</label>
+                    <input id="dc_f_max" class="ant-input" type="number" min="1" step="1000" />
+                    <div class="ant-form-item-explain" id="dc_e_max" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("discount.maxDiscountHint")</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label">@Html.T("discount.minOrder")</label>
+                    <input id="dc_f_min" class="ant-input" type="number" min="0" step="10000" />
+                    <div class="ant-form-item-explain" id="dc_e_min" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("discount.minOrderHint")</div>
+                </div>
+                <div class="ant-form-item mb-0 mt-5">
+                    <label class="ant-form-item-label">@Html.T("discount.maxUses")</label>
+                    <input id="dc_f_maxuses" class="ant-input" type="number" min="1" />
+                    <div class="ant-form-item-explain" id="dc_e_maxuses" style="display:none"></div>
+                    <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("discount.maxUsesHint")</div>
+                </div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("discount.window")</label>
+                <div class="ant-input ant-date-range" style="height:32px">
+                    <span class="ant-date-shell" style="flex:1">
+                        <input id="dc_f_from" type="datetime-local" required />
+                        <span class="ant-date-ph">@Html.T("x.fromDate")</span>
+                    </span>
+                    <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+                    <span class="ant-date-shell" style="flex:1">
+                        <input id="dc_f_to" type="datetime-local" required />
+                        <span class="ant-date-ph">@Html.T("x.toDate")</span>
+                    </span>
+                    <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+                </div>
+                <div class="ant-form-item-explain" id="dc_e_window" style="display:none"></div>
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("discount.windowHint")</div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("discount.description")</label>
+                <textarea id="dc_f_desc" class="ant-input" rows="2"></textarea>
+                <div class="ant-form-item-explain" id="dc_e_desc" style="display:none"></div>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="dc_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="dc_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="cm_modal">
+    <div class="ant-modal" style="max-width:640px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title" id="cm_modal_title">@Html.T("campaign.createTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="cm_modal"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <div class="ant-form-item mb-0">
+                <label class="ant-form-item-label required">@Html.T("campaign.name")</label>
+                <input id="cm_f_name" class="ant-input" />
+                <div class="ant-form-item-explain" id="cm_e_name" style="display:none"></div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("campaign.window")</label>
+                <div class="ant-input ant-date-range" style="height:32px">
+                    <span class="ant-date-shell" style="flex:1">
+                        <input id="cm_f_from" type="datetime-local" required />
+                        <span class="ant-date-ph">@Html.T("x.fromDate")</span>
+                    </span>
+                    <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+                    <span class="ant-date-shell" style="flex:1">
+                        <input id="cm_f_to" type="datetime-local" required />
+                        <span class="ant-date-ph">@Html.T("x.toDate")</span>
+                    </span>
+                    <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+                </div>
+                <div class="ant-form-item-explain" id="cm_e_window" style="display:none"></div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label required">@Html.T("campaign.perUserLimit")</label>
+                <input id="cm_f_limit" class="ant-input" type="number" min="1" />
+                <div class="ant-form-item-explain" id="cm_e_limit" style="display:none"></div>
+                <div class="mt-1 text-xs text-[var(--text-3)]">@Html.T("campaign.perUserLimitHint")</div>
+            </div>
+            <div class="ant-form-item mb-0 mt-5">
+                <label class="ant-form-item-label">@Html.T("campaign.description")</label>
+                <textarea id="cm_f_desc" class="ant-input" rows="2"></textarea>
+                <div class="ant-form-item-explain" id="cm_e_desc" style="display:none"></div>
+            </div>
+        </div>
+        <div class="ant-modal-footer">
+            <button type="button" class="ant-btn" data-close="cm_modal">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="cm_save">@Html.T("common.save")</button>
+        </div>
+    </div>
+</div>
+
+<div class="ant-modal-mask" id="cm_links">
+    <div class="ant-modal" style="max-width:620px">
+        <div class="ant-modal-header">
+            <span class="ant-modal-title">@Html.T("campaign.linksTitle")</span>
+            <button type="button" class="ant-modal-close" data-close="cm_links"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+        <div class="ant-modal-body">
+            <h5 class="mb-2 text-base font-semibold text-white">@Html.T("campaign.linkedCodes")</h5>
+            <div class="mb-2 flex flex-wrap gap-2" id="cm_lk_codes"></div>
+            <div class="mb-5 flex">
+                <select id="cm_lk_code_pick" class="ant-input rounded-r-none"></select>
+                <button type="button" class="ant-btn ant-btn-primary -ml-px shrink-0 rounded-l-none" id="cm_lk_code_add">@Html.T("campaign.attach")</button>
+            </div>
+            <h5 class="mb-2 text-base font-semibold text-white">@Html.T("campaign.linkedCombos")</h5>
+            <div class="mb-2 flex flex-wrap gap-2" id="cm_lk_combos"></div>
+            <div class="mb-5 flex">
+                <select id="cm_lk_combo_pick" class="ant-input rounded-r-none"></select>
+                <button type="button" class="ant-btn ant-btn-primary -ml-px shrink-0 rounded-l-none" id="cm_lk_combo_add">@Html.T("campaign.attach")</button>
+            </div>
+            <h5 class="mb-2 text-base font-semibold text-white">@Html.T("campaign.linkedArticles")</h5>
+            <div class="mb-2 flex flex-wrap gap-2" id="cm_lk_articles"></div>
+            <div class="flex">
+                <select id="cm_lk_article_pick" class="ant-input rounded-r-none"></select>
+                <button type="button" class="ant-btn ant-btn-primary -ml-px shrink-0 rounded-l-none" id="cm_lk_article_add">@Html.T("campaign.attach")</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ant-drawer-mask" id="ar_d_mask"></div>
+<aside class="ant-drawer" id="ar_drawer" style="width:640px" aria-hidden="true">
+    <div class="ant-drawer-header">
+        <span class="text-sm font-semibold text-white" id="ar_d_title">@Html.T("article.createTitle")</span>
+        <div class="flex items-center gap-2">
+            <button type="button" class="ant-btn" id="ar_cancel">@Html.T("common.cancel")</button>
+            <button type="button" class="ant-btn ant-btn-primary" id="ar_save">@Html.T("common.save")</button>
+            <button type="button" class="ant-btn ant-btn-text ant-btn-icon" id="ar_d_close" aria-label="@Html.T("x.drawerClose")"><span class="anticon">@Html.Raw(Icons.Get("Close"))</span></button>
+        </div>
+    </div>
+    <div class="ant-drawer-body">
+        <div class="ant-form-item mb-0">
+            <label class="ant-form-item-label required">@Html.T("article.title")</label>
+            <input id="ar_f_title" class="ant-input" />
+            <div class="ant-form-item-explain" id="ar_e_title" style="display:none"></div>
+        </div>
+        <div class="ant-form-item mb-0 mt-5">
+            <label class="ant-form-item-label">@Html.T("article.slug")</label>
+            <input id="ar_f_slug" class="ant-input" disabled readonly />
+        </div>
+        <div class="ant-form-item mb-0 mt-5">
+            <label class="ant-form-item-label required">@Html.T("article.type")</label>
+            <select id="ar_f_type" class="ant-input">
+                <option value="news">@Html.T("article.typeNews")</option>
+                <option value="promotion">@Html.T("article.typePromotion")</option>
+            </select>
+            <div class="ant-form-item-explain" id="ar_e_type" style="display:none"></div>
+        </div>
+        <div class="ant-form-item mb-0 mt-5">
+            <label class="ant-form-item-label">@Html.T("article.summary")</label>
+            <textarea id="ar_f_summary" class="ant-input" rows="2"></textarea>
+            <div class="ant-form-item-explain" id="ar_e_summary" style="display:none"></div>
+        </div>
+        <div class="ant-form-item mb-0 mt-5">
+            <label class="ant-form-item-label">@Html.T("article.thumbnail")</label>
+            <div class="ant-input-affix">
+                <input id="ar_f_thumb" class="ant-input" placeholder="https://..." maxlength="1024" />
+                <span class="ant-input-suffix" id="ar_thumb_btn"><span class="anticon">@Html.Raw(Icons.Get("Upload"))</span></span>
+            </div>
+            <input type="file" id="ar_thumb_file" class="hidden" accept="image/jpeg,image/png,image/webp" />
+            <div class="ant-form-item-explain" id="ar_e_thumb" style="display:none"></div>
+        </div>
+        <div class="ant-form-item mb-0 mt-5" id="ar_thumb_prev_wrap" style="display:none">
+            <label class="ant-form-item-label">@Html.T("article.thumbnailPreview")</label>
+            <img id="ar_thumb_prev" width="160" height="90" style="border-radius:8px;object-fit:cover" alt="" />
+        </div>
+        <div class="ant-form-item mb-0 mt-5">
+            <label class="ant-form-item-label required">@Html.T("article.content")</label>
+            <div id="ar_f_editor"></div>
+            <div class="ant-form-item-explain" id="ar_e_content" style="display:none"></div>
+        </div>
+    </div>
+</aside>
+
+@section Scripts {
+    <link rel="stylesheet" href="/vendor/quill.snow.css" />
+    <script src="/vendor/quill.js"></script>
+    <script src="/js/promotions.js"></script>
+}
