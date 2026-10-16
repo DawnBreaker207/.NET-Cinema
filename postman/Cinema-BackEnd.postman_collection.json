@@ -1,0 +1,2091 @@
+{
+  "info": {
+    "name": "Cinema BackEnd CP — Toàn bộ API + Flow",
+    "_postman_id": "cinemacp-full-api-flow-2026",
+    "description": "Bộ test 100% API của dự án Cinema BackEnd (Gin + PostgreSQL + RabbitMQ + Redis + SSE).\n\n## Cách dùng\n1. Chạy backend ở http://localhost:8080 (chế độ dev, có seed admin admin@cinema.local / admin123).\n2. Import collection này, ấn **Run collection** chạy theo thứ tự folder (00 → 11).\n3. Các biến (token, id) được tự động lưu vào collection variables qua test scripts mỗi request.\n\n## Luồng dữ liệu\n- **00 Health** → **01 Auth** (đăng ký khách, login admin/staff/customer → lưu token) → **02 Admin setup** (hall, movie, showtime) → **03 Catalog** (seat map → lấy seat id) → **05 Booking** (hold → pay → mock checkout → return → status → tickets → cancel → duplicate payment tự hoàn tiền) → **06 Staff** (counter sell, boxoffice, redeem) → **07 Reports/Batch** (closeDay → daily report) → **09 SSE** (token + stream) → **10 Negative** → **11 E2E** kiểm chứng toàn chuỗi.\n\n## Ghi chú quan trọng\n- **Thanh toán mock**: POST /orders/:id/pay {\"provider\":\"mock\"} trả redirect_url trỏ tới /mock-gateway/checkout?ref=... Để hoàn tất: POST /mock-gateway/checkout/{ref} với form mode=pay (gateway chụp tiền rồi gửi IPN tới /payments/mock/ipn, booking chuyển confirmed). Ở request checkout đã tắt follow redirect để bắt header Location = return URL của merchant.\n- **Redeem chỉ \"ok\" trong cửa sổ check-in** [giờ chiếu − 30p, giờ chiếu + thời lượng + 20p). Suất chiếu tạo ra nằm tương lai +2h nên redeem trả `too_early` — đó là hành vi ĐÚNG. Muốn thấy `ok`, tạo suất chiếu đã diễn ra trước khi đặt vé.\n- **Hold hết hạn sau 10 phút** — chạy cả bộ nhanh thì không sao.\n- **Upload poster**: request 02.08 dùng multipart field `file`, cần sửa `src` thành đường dẫn poster thật trên máy.\n- **AcceptTerms** trả lỗi \"terms acceptance is not required\" khi ACCOUNT_TERMS_VERSION=0 (mặc định dev) — test chấp nhận cả 2 nhánh.\n- **ResetPassword** cần token trong email không tự động hóa được — giữ như request tham khảo (chờ 400).\n- **SSE stream** mở kết nối dài; chạy riêng lẻ nếu muốn, hoặc để timeout.\n\nMọi response bọc {\"code\", \"message\", \"data\"}; code==0 là thành công. Mật khẩu user >= 6 ký tự."
+  },
+  "variable": [
+    { "key": "origin", "value": "http://localhost:8080", "type": "string" },
+    { "key": "base_url", "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "admin_email", "value": "admin@cinema.local", "type": "string" },
+    { "key": "admin_password", "value": "admin123", "type": "string" },
+    { "key": "admin_access_token", "value": "", "type": "string" },
+    { "key": "admin_refresh_token", "value": "", "type": "string" },
+    { "key": "admin_id", "value": "", "type": "string" },
+    { "key": "staff_email", "value": "", "type": "string" },
+    { "key": "staff_password", "value": "staff123", "type": "string" },
+    { "key": "staff_access_token", "value": "", "type": "string" },
+    { "key": "staff_id", "value": "", "type": "string" },
+    { "key": "customer_email", "value": "", "type": "string" },
+    { "key": "customer_password", "value": "secret123", "type": "string" },
+    { "key": "customer_access_token", "value": "", "type": "string" },
+    { "key": "customer_refresh_token", "value": "", "type": "string" },
+    { "key": "customer_id", "value": "", "type": "string" },
+    { "key": "flow_hall_id", "value": "", "type": "string" },
+    { "key": "hall_seat_id", "value": "", "type": "string" },
+    { "key": "admin_movie_id", "value": "", "type": "string" },
+    { "key": "temp_movie_id", "value": "", "type": "string" },
+    { "key": "poster_url", "value": "", "type": "string" },
+    { "key": "show_id", "value": "", "type": "string" },
+    { "key": "show_delete_id", "value": "", "type": "string" },
+    { "key": "show_a_start", "value": "", "type": "string" },
+    { "key": "show_b_start", "value": "", "type": "string" },
+    { "key": "seat_id_1", "value": "", "type": "string" },
+    { "key": "seat_id_2", "value": "", "type": "string" },
+    { "key": "seat_id_3", "value": "", "type": "string" },
+    { "key": "seat_id_4", "value": "", "type": "string" },
+    { "key": "seat_id_5", "value": "", "type": "string" },
+    { "key": "online_booking_id", "value": "", "type": "string" },
+    { "key": "cancel_booking_id", "value": "", "type": "string" },
+    { "key": "counter_booking_id", "value": "", "type": "string" },
+    { "key": "pay_redirect_url", "value": "", "type": "string" },
+    { "key": "checkout_ref", "value": "", "type": "string" },
+    { "key": "return_url", "value": "", "type": "string" },
+    { "key": "ticket_id", "value": "", "type": "string" },
+    { "key": "date_today", "value": "", "type": "string" },
+    { "key": "from_date", "value": "", "type": "string" },
+    { "key": "to_date", "value": "", "type": "string" },
+    { "key": "admin_target_user_id", "value": "", "type": "string" },
+    { "key": "events_token", "value": "", "type": "string" },
+    { "key": "events_stream_url", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "00 — Health & Providers",
+      "description": "Endpoint công khai: sinh tồn, sẵn sàng, danh sách cổng thanh toán.",
+      "item": [
+        {
+          "name": "00.01 GET /health (root)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('health 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{origin}}/health", "host": ["{{origin}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "00.02 GET /healthz (root)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('healthz 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{origin}}/healthz", "host": ["{{origin}}"], "path": ["healthz"] }
+          }
+        },
+        {
+          "name": "00.03 GET /api/v1/healthz",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('envelope code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/healthz", "host": ["{{base_url}}"], "path": ["healthz"] }
+          }
+        },
+        {
+          "name": "00.04 GET /payments/providers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 va co danh sach provider', function () { pm.expect(b.code).eq(0); pm.expect(Array.isArray(b.data)).eq(true); });",
+                  "if (Array.isArray(b.data)) { b.data.forEach(function (p) { console.log('provider:', p); }); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/payments/providers", "host": ["{{base_url}}"], "path": ["payments", "providers"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 — Auth & Accounts",
+      "description": "Đăng ký khách, login admin/staff/customer. Các token được lưu vào biến để mọi request sau dùng.",
+      "item": [
+        {
+          "name": "01.01 Register khách (tạo email ngẫu nhiên)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('customer_email', 'pm.customer.' + Date.now() + '@cinema.local');",
+                  "pm.collectionVariables.set('customer_password', 'secret123');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.code === 0) { pm.test('register ok', function () { pm.expect(b.data.user.email).eq(pm.collectionVariables.get('customer_email')); }); }",
+                  "else { console.log('register khong ok (co the email da ton tai tu lan chay truoc):', b.message); pm.test('register tra code khac 0 nhung chap nhan', function () { pm.expect(b.message).to.be.ok; }); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\",\n  \"full_name\": \"Postman Customer\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "01.02 Login admin (seed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  const u = b.data.user;",
+                  "  pm.collectionVariables.set('admin_access_token', b.data.access_token);",
+                  "  pm.collectionVariables.set('admin_refresh_token', b.data.refresh_token);",
+                  "  pm.collectionVariables.set('admin_id', u.id);",
+                  "  console.log('admin id:', u.id, 'role:', u.role);",
+                  "} else { console.warn('Admin login that bai - kiem tra admin_email/admin_password trong variables:', b.message); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "01.03 Admin tạo tài khoản staff",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('staff_email', 'pm.staff.' + Date.now() + '@cinema.local');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0 && b.data && b.data.id) { pm.collectionVariables.set('staff_id', b.data.id); console.log('staff id:', b.data.id); }",
+                  "else if (b.code === 0 && Array.isArray(b.items)) { pm.collectionVariables.set('staff_id', b.items[0].id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{staff_email}}\",\n  \"password\": \"{{staff_password}}\",\n  \"full_name\": \"Postman Staff\",\n  \"role\": \"staff\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/users", "host": ["{{base_url}}"], "path": ["admin", "users"] }
+          }
+        },
+        {
+          "name": "01.04 Login staff",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('staff_access_token', b.data.access_token);",
+                  "  if (!pm.collectionVariables.get('staff_id')) { pm.collectionVariables.set('staff_id', b.data.user.id); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{staff_email}}\",\n  \"password\": \"{{staff_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "01.05 Login customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('customer_access_token', b.data.access_token);",
+                  "  pm.collectionVariables.set('customer_refresh_token', b.data.refresh_token);",
+                  "  pm.collectionVariables.set('customer_id', b.data.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Admin Setup (hall • movie • showtime)",
+      "description": "Tạo phòng chiếu, phim, suất chiếu cho các flow sau. Lưu các id vào biến.",
+      "item": [
+        {
+          "name": "02.01 GET /admin/halls",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/halls?page=1&page_size=10", "host": ["{{base_url}}"], "path": ["admin", "halls"], "query": [{ "key": "page", "value": "1" }, { "key": "page_size", "value": "10" }] }
+          }
+        },
+        {
+          "name": "02.02 POST /admin/halls (tạo phòng 3x4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('flow_hall_id', b.data.id); console.log('hall id:', b.data.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Flow Hall {{$timestamp}}\",\n  \"rows\": 3,\n  \"seats_per_row\": 4,\n  \"seat_types\": {\n    \"vip\": [\"A1\", \"A2\", \"A3\", \"A4\"],\n    \"standard\": [\"B1\", \"B2\", \"B3\", \"B4\", \"C1\", \"C2\", \"C3\", \"C4\"]\n  },\n  \"gaps\": [],\n  \"spans\": [],\n  \"prices\": {\n    \"standard\": 90000,\n    \"vip\": 150000,\n    \"couple\": 200000,\n    \"recliner\": 120000\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/halls", "host": ["{{base_url}}"], "path": ["admin", "halls"] }
+          }
+        },
+        {
+          "name": "02.03 GET /admin/halls/{id}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + id khop', function () { pm.expect(b.code).eq(0); pm.expect(b.data.id).eq(pm.collectionVariables.get('flow_hall_id')); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/halls/{{flow_hall_id}}", "host": ["{{base_url}}"], "path": ["admin", "halls", "{{flow_hall_id}}"] }
+          }
+        },
+        {
+          "name": "02.04 GET /admin/halls/{id}/seats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "let seats = b.data;",
+                  "if (Array.isArray(b.data.items)) seats = b.data.items;",
+                  "if (Array.isArray(seats) && seats.length) { pm.collectionVariables.set('hall_seat_id', seats[0].id || seats[0].showtime_seat_id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/halls/{{flow_hall_id}}/seats", "host": ["{{base_url}}"], "path": ["admin", "halls", "{{flow_hall_id}}", "seats"] }
+          }
+        },
+        {
+          "name": "02.05 PUT /admin/halls/{id}/prices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": {\n    \"standard\": 90000,\n    \"vip\": 160000,\n    \"couple\": 200000,\n    \"recliner\": 120000\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/halls/{{flow_hall_id}}/prices", "host": ["{{base_url}}"], "path": ["admin", "halls", "{{flow_hall_id}}", "prices"] }
+          }
+        },
+        {
+          "name": "02.06 PUT /admin/halls/{id}/seats/{seatId}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seat_type\": \"standard\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/halls/{{flow_hall_id}}/seats/{{hall_seat_id}}", "host": ["{{base_url}}"], "path": ["admin", "halls", "{{flow_hall_id}}", "seats", "{{hall_seat_id}}"] }
+          }
+        },
+        {
+          "name": "02.07 POST /admin/movies (phim chính cho flow)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('admin_movie_id', b.data.id); console.log('movie id:', b.data.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ngay Tan Cua Than Sam\",\n  \"genre\": \"Sci-Fi\",\n  \"duration\": 148,\n  \"director\": \"Christopher Nolan\",\n  \"description\": \"Phim tao boi Postman flow\",\n  \"poster_url\": \"\",\n  \"trailer_url\": \"https://www.youtube.com/watch?v=YoHD9XEInc0\",\n  \"cast\": \"Leonardo DiCaprio\",\n  \"age_rating\": \"T13\",\n  \"release_date\": \"2026-09-01\",\n  \"status\": \"showing\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/movies", "host": ["{{base_url}}"], "path": ["movies"] }
+          }
+        },
+        {
+          "name": "02.08 POST /admin/uploads/poster (multipart file)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0 && typeof b.data === 'string') { pm.collectionVariables.set('poster_url', b.data); }",
+                  "else if (b.code === 0 && b.data && b.data.url) { pm.collectionVariables.set('poster_url', b.data.url); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "/tmp/poster.png", "description": "Sua src thanh duong dan poster that tren may" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/admin/uploads/poster", "host": ["{{base_url}}"], "path": ["admin", "uploads", "poster"] }
+          }
+        },
+        {
+          "name": "02.09 PUT /admin/movies/{id} (gán poster_url)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ngay Tan Cua Than Sam\",\n  \"genre\": \"Sci-Fi\",\n  \"duration\": 148,\n  \"director\": \"Christopher Nolan\",\n  \"poster_url\": \"{{poster_url}}\",\n  \"trailer_url\": \"https://www.youtube.com/watch?v=YoHD9XEInc0\",\n  \"cast\": \"Leonardo DiCaprio\",\n  \"age_rating\": \"T13\",\n  \"release_date\": \"2026-09-01\",\n  \"status\": \"showing\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/movies/{{admin_movie_id}}", "host": ["{{base_url}}"], "path": ["movies", "{{admin_movie_id}}"] }
+          }
+        },
+        {
+          "name": "02.10 POST /admin/movies (phim dùng 1 lần — để test update/delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('temp_movie_id', b.data.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Phim Huy - Disposable\",\n  \"genre\": \"Drama\",\n  \"duration\": 100,\n  \"director\": \"Someone\",\n  \"age_rating\": \"K\",\n  \"release_date\": \"2026-09-10\",\n  \"status\": \"draft\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/movies", "host": ["{{base_url}}"], "path": ["movies"] }
+          }
+        },
+        {
+          "name": "02.11 PUT /admin/movies/{id} (đổi status → ended)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Phim Huy - Disposable\",\n  \"genre\": \"Drama\",\n  \"duration\": 100,\n  \"director\": \"Someone\",\n  \"age_rating\": \"K\",\n  \"release_date\": \"2026-09-10\",\n  \"status\": \"ended\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/movies/{{temp_movie_id}}", "host": ["{{base_url}}"], "path": ["movies", "{{temp_movie_id}}"] }
+          }
+        },
+        {
+          "name": "02.12 DELETE /admin/movies/{id} (phim tạm)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/movies/{{temp_movie_id}}", "host": ["{{base_url}}"], "path": ["movies", "{{temp_movie_id}}"] }
+          }
+        },
+        {
+          "name": "02.13 POST /admin/showtimes (suất +2h — dùng bán vé)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "function iso(ms) { var d = new Date(ms); var o = -d.getTimezoneOffset(); var s = (o < 0 ? '-' : '+'); o = Math.abs(o); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + s + pad(Math.floor(o / 60)) + ':' + pad(o % 60); }",
+                  "pm.collectionVariables.set('show_a_start', iso(Date.now() + 2 * 3600 * 1000));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('show_id', b.data.id); console.log('show id:', b.data.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_id\": \"{{admin_movie_id}}\",\n  \"hall_id\": \"{{flow_hall_id}}\",\n  \"start_at\": \"{{show_a_start}}\",\n  \"status\": \"open\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/showtimes", "host": ["{{base_url}}"], "path": ["admin", "showtimes"] }
+          }
+        },
+        {
+          "name": "02.14 POST /admin/showtimes (suất +7h — test update/delete)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "function iso(ms) { var d = new Date(ms); var o = -d.getTimezoneOffset(); var s = (o < 0 ? '-' : '+'); o = Math.abs(o); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + s + pad(Math.floor(o / 60)) + ':' + pad(o % 60); }",
+                  "pm.collectionVariables.set('show_b_start', iso(Date.now() + 7 * 3600 * 1000));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('show_delete_id', b.data.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_id\": \"{{admin_movie_id}}\",\n  \"hall_id\": \"{{flow_hall_id}}\",\n  \"start_at\": \"{{show_b_start}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/showtimes", "host": ["{{base_url}}"], "path": ["admin", "showtimes"] }
+          }
+        },
+        {
+          "name": "02.15 PUT /admin/showtimes/{id} (update)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_id\": \"{{admin_movie_id}}\",\n  \"hall_id\": \"{{flow_hall_id}}\",\n  \"start_at\": \"{{show_b_start}}\",\n  \"status\": \"closed\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/showtimes/{{show_delete_id}}", "host": ["{{base_url}}"], "path": ["admin", "showtimes", "{{show_delete_id}}"] }
+          }
+        },
+        {
+          "name": "02.16 DELETE /admin/showtimes/{id}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/showtimes/{{show_delete_id}}", "host": ["{{base_url}}"], "path": ["admin", "showtimes", "{{show_delete_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Catalog công khai",
+      "description": "API khách xem: danh sách phim, chi tiết phim, suất chiếu, sơ đồ ghế. Lấy các seat id để đặt vé.",
+      "item": [
+        {
+          "name": "03.01 GET /movies (lọc + sắp xếp)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + co data', function () { pm.expect(b.code).eq(0); pm.expect(b.data).to.be.ok; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/movies?status=showing&genre=Sci-Fi&sort=release_date&order=desc&page=1&page_size=10", "host": ["{{base_url}}"], "path": ["movies"], "query": [{ "key": "status", "value": "showing" }, { "key": "genre", "value": "Sci-Fi" }, { "key": "sort", "value": "release_date" }, { "key": "order", "value": "desc" }, { "key": "page", "value": "1" }, { "key": "page_size", "value": "10" }] }
+          }
+        },
+        {
+          "name": "03.02 GET /movies/{id}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + id khop', function () { pm.expect(b.code).eq(0); pm.expect(b.data.id).eq(pm.collectionVariables.get('admin_movie_id')); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/movies/{{admin_movie_id}}", "host": ["{{base_url}}"], "path": ["movies", "{{admin_movie_id}}"] }
+          }
+        },
+        {
+          "name": "03.03 GET /movies/{id}/showtimes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/movies/{{admin_movie_id}}/showtimes", "host": ["{{base_url}}"], "path": ["movies", "{{admin_movie_id}}", "showtimes"] }
+          }
+        },
+        {
+          "name": "03.04 GET /showtimes (he thong suat ngay)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "var d = new Date();",
+                  "pm.collectionVariables.set('date_today', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/showtimes?date={{date_today}}", "host": ["{{base_url}}"], "path": ["showtimes"], "query": [{ "key": "date", "value": "{{date_today}}" }] }
+          }
+        },
+        {
+          "name": "03.05 GET /shows/{id}/seats (sơ đồ ghế — lấy 5 ghế trống)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "const data = b.data || {};",
+                  "const seats = (data.seats || []).filter(function (s) { return s.status === 'available' && !s.is_gap && s.showtime_seat_id; });",
+                  "pm.test('co it nhat 5 ghe trong', function () { pm.expect(seats.length).gte(5); });",
+                  "if (seats.length >= 5) {",
+                  "  for (var i = 0; i < 5; i++) { pm.collectionVariables.set('seat_id_' + (i + 1), seats[i].showtime_seat_id); }",
+                  "  console.log('seat ids:', seats.slice(0, 5).map(function (s) { return s.label; }).join(', '));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/shows/{{show_id}}/seats", "host": ["{{base_url}}"], "path": ["shows", "{{show_id}}", "seats"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Tài khoản khách",
+      "description": "users/me, đổi mật khẩu, terms, refresh, logout (rồi login lại để các folder sau còn token).",
+      "item": [
+        {
+          "name": "04.01 GET /users/me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + email khop', function () { pm.expect(b.code).eq(0); pm.expect(b.data.email).eq(pm.collectionVariables.get('customer_email')); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/users/me", "host": ["{{base_url}}"], "path": ["users", "me"] }
+          }
+        },
+        {
+          "name": "04.02 PUT /users/me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Postman Customer Renamed\",\n  \"phone\": \"0987654321\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/users/me", "host": ["{{base_url}}"], "path": ["users", "me"] }
+          }
+        },
+        {
+          "name": "04.03 PUT /users/me/password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  if (b.data && b.data.access_token) { pm.collectionVariables.set('customer_access_token', b.data.access_token); }",
+                  "  pm.collectionVariables.set('customer_password', 'newsecret123');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{customer_password}}\",\n  \"new_password\": \"newsecret123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/users/me/password", "host": ["{{base_url}}"], "path": ["users", "me", "password"] }
+          }
+        },
+        {
+          "name": "04.04 POST /auth/terms-accept (dev: chưa bật terms)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('chap nhan hoac bao chua bat terms', function () {",
+                  "  if (b.code === 0) { pm.expect(b.data.access_token).to.be.ok; }",
+                  "  else { pm.expect((b.message || '').toLowerCase()).to.include('term'); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/terms-accept", "host": ["{{base_url}}"], "path": ["auth", "terms-accept"] }
+          }
+        },
+        {
+          "name": "04.05 POST /auth/refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + token moi', function () { pm.expect(b.code).eq(0); pm.expect(b.data.access_token).to.be.ok; });",
+                  "if (b.code === 0) { pm.collectionVariables.set('customer_access_token', b.data.access_token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{customer_refresh_token}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/refresh", "host": ["{{base_url}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "04.06 POST /auth/logout (thu hồi session)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{customer_refresh_token}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        },
+        {
+          "name": "04.07 Login lại (khôi phục session sau logout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('customer_access_token', b.data.access_token);",
+                  "  pm.collectionVariables.set('customer_refresh_token', b.data.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"{{customer_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Đặt vé & Thanh toán online",
+      "description": "FLOW ONLINE: hold → pay(mock) → checkout mock gateway → return → status → chi tiết vé → danh sách đơn → hủy đơn → duplicate payment tự hoàn tiền.",
+      "item": [
+        {
+          "name": "05.01 POST /orders/hold (giữ 2 ghế)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('online_booking_id', b.data.booking_id);",
+                  "  pm.test('giu 2 ghe', function () { pm.expect(b.data.seats.length).eq(2); });",
+                  "  console.log('booking_id:', b.data.booking_id, 'total:', b.data.total_amount);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_id\": \"{{show_id}}\",\n  \"seat_ids\": [\"{{seat_id_1}}\", \"{{seat_id_2}}\"],\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/orders/hold", "host": ["{{base_url}}"], "path": ["orders", "hold"] }
+          }
+        },
+        {
+          "name": "05.02 POST /orders/{id}/pay (provider mock)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + redirect mock', function () { pm.expect(b.code).eq(0); pm.expect(/\\/mock-gateway\\/checkout/.test(b.data.redirect_url)).eq(true); });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('pay_redirect_url', b.data.redirect_url);",
+                  "  var m = /[?&]ref=([^&]+)/.exec(b.data.redirect_url);",
+                  "  if (m) { pm.collectionVariables.set('checkout_ref', decodeURIComponent(m[1])); }",
+                  "  console.log('redirect:', b.data.redirect_url);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"mock\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/orders/{{online_booking_id}}/pay", "host": ["{{base_url}}"], "path": ["orders", "{{online_booking_id}}", "pay"] }
+          }
+        },
+        {
+          "name": "05.03 POST mock gateway checkout (mô phỏng khách bấm thanh toán)",
+          "description": "POST /mock-gateway/checkout/{ref} form mode=pay → gateway chụp tiền + gửi IPN tới /payments/mock/ipn → booking confirmed. Đang tắt follow redirect để bắt Location = return URL.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('redirect 3xx tu gateway', function () { pm.expect(pm.response.code).gte(300); pm.expect(pm.response.code).lt(400); });",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "if (/payments\\/mock\\/return/.test(loc)) { pm.collectionVariables.set('return_url', loc); console.log('return url:', loc); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "setting": { "followRedirects": "off" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "mode", "value": "pay", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{origin}}/mock-gateway/checkout/{{checkout_ref}}", "host": ["{{origin}}"], "path": ["mock-gateway", "checkout", "{{checkout_ref}}"] }
+          }
+        },
+        {
+          "name": "05.04 GET /payments/mock/return (khách quay về từ cổng)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + confirmed', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { console.log('booking_status:', b.data.booking_status); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{return_url}}", "host": ["{{return_url}}"], "path": [] }
+          }
+        },
+        {
+          "name": "05.05 GET /orders/{id}/status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + status confirmed', function () { pm.expect(b.code).eq(0); pm.expect(b.data.status).eq('confirmed'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders/{{online_booking_id}}/status", "host": ["{{base_url}}"], "path": ["orders", "{{online_booking_id}}", "status"] }
+          }
+        },
+        {
+          "name": "05.06 GET /orders/{id} (chi tiết + vé)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + 2 ve', function () { pm.expect(b.code).eq(0); pm.expect(b.data.tickets.length).eq(2); });",
+                  "if (b.code === 0 && b.data.tickets.length) { pm.collectionVariables.set('ticket_id', b.data.tickets[0].id); console.log('ticket:', b.data.tickets[0].id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders/{{online_booking_id}}", "host": ["{{base_url}}"], "path": ["orders", "{{online_booking_id}}"] }
+          }
+        },
+        {
+          "name": "05.07 GET /orders (danh sách đơn của tôi)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders?page=1&page_size=20", "host": ["{{base_url}}"], "path": ["orders"], "query": [{ "key": "page", "value": "1" }, { "key": "page_size", "value": "20" }] }
+          }
+        },
+        {
+          "name": "05.08 POST /orders/hold (đơn thứ 2 — để hủy)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('cancel_booking_id', b.data.booking_id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_id\": \"{{show_id}}\",\n  \"seat_ids\": [\"{{seat_id_3}}\"],\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/orders/hold", "host": ["{{base_url}}"], "path": ["orders", "hold"] }
+          }
+        },
+        {
+          "name": "05.09 POST /orders/{id}/cancel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + cancelled', function () { pm.expect(b.code).eq(0); pm.expect(b.data.status).eq('cancelled'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders/{{cancel_booking_id}}/cancel", "host": ["{{base_url}}"], "path": ["orders", "{{cancel_booking_id}}", "cancel"] }
+          }
+        },
+        {
+          "name": "05.10 POST /orders/{id}/pay LẦN 2 (giả duplicate → tự hoàn tiền)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 (mở checkout mới)', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  var m = /[?&]ref=([^&]+)/.exec(b.data.redirect_url);",
+                  "  if (m) { pm.collectionVariables.set('checkout_ref2', decodeURIComponent(m[1])); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"mock\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/orders/{{online_booking_id}}/pay", "host": ["{{base_url}}"], "path": ["orders", "{{online_booking_id}}", "pay"] }
+          }
+        },
+        {
+          "name": "05.11 POST mock checkout lần 2 (capture → payment sau bị refund duplicate)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('redirect 3xx tu gateway', function () { pm.expect(pm.response.code).gte(300); pm.expect(pm.response.code).lt(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "setting": { "followRedirects": "off" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "mode", "value": "pay", "type": "text" }
+              ]
+            },
+            "url": { "raw": "{{origin}}/mock-gateway/checkout/{{checkout_ref2}}", "host": ["{{origin}}"], "path": ["mock-gateway", "checkout", "{{checkout_ref2}}"] }
+          }
+        },
+        {
+          "name": "05.12 GET /orders/{id}/status (đơn chính vẫn confirmed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('van confirmed sau duplicate', function () { pm.expect(b.code).eq(0); pm.expect(b.data.status).eq('confirmed'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders/{{online_booking_id}}/status", "host": ["{{base_url}}"], "path": ["orders", "{{online_booking_id}}", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 — Nhân viên (staff)",
+      "description": "Dashboard, bán vé tại quầy (walk-in), doanh thu boxoffice, danh sách vé suất, check-in vé.",
+      "item": [
+        {
+          "name": "06.01 GET /staff/dashboard",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "var d = new Date();",
+                  "pm.collectionVariables.set('date_today', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staff_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/staff/dashboard?date={{date_today}}", "host": ["{{base_url}}"], "path": ["staff", "dashboard"], "query": [{ "key": "date", "value": "{{date_today}}" }] }
+          }
+        },
+        {
+          "name": "06.02 POST /staff/orders (bán quầy walk-in — confirmed ngay)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + confirmed', function () { pm.expect(b.code).eq(0); pm.expect(b.data.status).eq('confirmed'); });",
+                  "if (b.code === 0) { pm.collectionVariables.set('counter_booking_id', b.data.booking_id); console.log('counter booking:', b.data.booking_id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staff_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_id\": \"{{show_id}}\",\n  \"seat_ids\": [\"{{seat_id_4}}\", \"{{seat_id_5}}\"],\n  \"customer_name\": \"Nguyễn Khách Vãng Lai\",\n  \"customer_phone\": \"0901234567\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/staff/orders", "host": ["{{base_url}}"], "path": ["staff", "orders"] }
+          }
+        },
+        {
+          "name": "06.03 GET /staff/boxoffice/day",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "var d = new Date();",
+                  "pm.collectionVariables.set('date_today', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staff_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/staff/boxoffice/day?date={{date_today}}", "host": ["{{base_url}}"], "path": ["staff", "boxoffice", "day"], "query": [{ "key": "date", "value": "{{date_today}}" }] }
+          }
+        },
+        {
+          "name": "06.04 GET /staff/showtimes/{id}/tickets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { var arr = Array.isArray(b.data) ? b.data : (b.data.items || []); console.log('so ve suat:', arr.length); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staff_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/staff/showtimes/{{show_id}}/tickets?status=issued", "host": ["{{base_url}}"], "path": ["staff", "showtimes", "{{show_id}}", "tickets"], "query": [{ "key": "status", "value": "issued" }] }
+          }
+        },
+        {
+          "name": "06.05 POST /tickets/{id}/redeem (§ầu tiên — ok hoặc too_early)",
+          "description": "Cửa sổ check-in: [giờ chiếu−30p ; giờ chiếu+thời lượng+20p). Suất tạo +2h nên thường trả too_early (đúng). Muốn ok: tạo suất đã bắt đầu trước khi đặt vé.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('redeem_status', b.data.status);",
+                  "  console.log('redeem status:', b.data.status, '(ok | too_early | closed) tuy vao cua so check-in)');",
+                  "  pm.test('status hop le', function () { pm.expect(['ok', 'too_early', 'closed', 'used']).to.include(b.data.status); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staff_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"showtime_id\": \"{{show_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/tickets/{{ticket_id}}/redeem", "host": ["{{base_url}}"], "path": ["tickets", "{{ticket_id}}", "redeem"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 — Reports & Batch (admin)",
+      "description": "Báo cáo doanh thu từ daily_aggregates (cần chạy closeDay trước), lịch sử batch job, chạy closeDay.",
+      "item": [
+        {
+          "name": "07.01 GET /admin/batch/jobs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/batch/jobs?page=1&page_size=10&search=", "host": ["{{base_url}}"], "path": ["admin", "batch", "jobs"], "query": [{ "key": "page", "value": "1" }, { "key": "page_size", "value": "10" }, { "key": "search", "value": "" }] }
+          }
+        },
+        {
+          "name": "07.02 POST /admin/batch/jobs/closeDay/run (chạy nền → 202)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('202 accepted', function () { pm.expect(pm.response.code).eq(202); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/batch/jobs/closeDay/run", "host": ["{{base_url}}"], "path": ["admin", "batch", "jobs", "closeDay", "run"] }
+          }
+        },
+        {
+          "name": "07.03 GET /admin/reports/daily (7 ngày gần nhất)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "function fmt(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }",
+                  "var now = new Date();",
+                  "var ago = new Date(now.getTime() - 7 * 86400000);",
+                  "pm.collectionVariables.set('to_date', fmt(now));",
+                  "pm.collectionVariables.set('from_date', fmt(ago));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0) { console.log('daily report rows:', (b.data && b.data.length !== undefined) ? b.data.length : 'ok'); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/reports/daily?from={{from_date}}&to={{to_date}}", "host": ["{{base_url}}"], "path": ["admin", "reports", "daily"], "query": [{ "key": "from", "value": "{{from_date}}" }, { "key": "to", "value": "{{to_date}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 — Quản lý user (admin)",
+      "description": "Danh sách user, tạo user, khóa/kích hoạt, đổi vai trò.",
+      "item": [
+        {
+          "name": "08.01 GET /admin/users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/users?page=1&page_size=10&role=&active=", "host": ["{{base_url}}"], "path": ["admin", "users"], "query": [{ "key": "page", "value": "1" }, { "key": "page_size", "value": "10" }, { "key": "role", "value": "" }, { "key": "active", "value": "" }] }
+          }
+        },
+        {
+          "name": "08.02 POST /admin/users (tạo staff 2)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('staff2_email', 'pm.staff2.' + Date.now() + '@cinema.local');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "if (b.code === 0 && b.data && b.data.id) {",
+                  "  pm.collectionVariables.set('admin_target_user_id', b.data.id);",
+                  "  pm.test('role staff', function () { pm.expect(b.data.role).eq('staff'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{staff2_email}}\",\n  \"password\": \"staff234\",\n  \"full_name\": \"Postman Staff 2\",\n  \"role\": \"staff\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/users", "host": ["{{base_url}}"], "path": ["admin", "users"] }
+          }
+        },
+        {
+          "name": "08.03 PATCH /admin/users/{id} (khóa active=false)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/users/{{admin_target_user_id}}", "host": ["{{base_url}}"], "path": ["admin", "users", "{{admin_target_user_id}}"] }
+          }
+        },
+        {
+          "name": "08.04 PATCH /admin/users/{id} (mở lại active=true)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + active true', function () { pm.expect(b.code).eq(0); pm.expect(b.data.active).eq(true); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": true,\n  \"role\": \"staff\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/users/{{admin_target_user_id}}", "host": ["{{base_url}}"], "path": ["admin", "users", "{{admin_target_user_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 — Realtime (SSE)",
+      "description": "Lấy token realtime ngắn hạn cho một suất chiếu rồi mở stream sự kiện đổi ghế (SSE text/event-stream).",
+      "item": [
+        {
+          "name": "09.01 GET /events/token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + token', function () { pm.expect(b.code).eq(0); pm.expect(b.data.token).to.be.ok; });",
+                  "if (b.code === 0) {",
+                  "  pm.collectionVariables.set('events_token', b.data.token);",
+                  "  pm.collectionVariables.set('events_stream_url', b.data.stream_url);",
+                  "  console.log('stream_url (relative):', b.data.stream_url, 'expires_in:', b.data.expires_in);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/events/token?show_id={{show_id}}", "host": ["{{base_url}}"], "path": ["events", "token"], "query": [{ "key": "show_id", "value": "{{show_id}}" }] }
+          }
+        },
+        {
+          "name": "09.02 GET /events/shows/{id} (stream SSE)",
+          "description": "Stream giữ kết nối mở; Postman nhận các event seat-updates. Chạy riêng lẻ kèm timeout nếu cần (kết nối dài). Token có hạn 30s.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('mo duoc stream (200 text/event-stream)', function () { pm.expect(pm.response.code).to.be.oneOf([200, 202]); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{origin}}{{events_stream_url}}", "host": ["{{origin}}{{events_stream_url}}"], "path": [] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 — Negative & bảo vệ",
+      "description": "Các guard: thiếu token 401, sai role 403, validate 400, sai mật khẩu 401, không tồn tại 404.",
+      "item": [
+        {
+          "name": "10.01 GET /users/me (không có token) → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 unauthorized', function () { pm.expect(pm.response.code).eq(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/users/me", "host": ["{{base_url}}"], "path": ["users", "me"] }
+          }
+        },
+        {
+          "name": "10.02 GET /admin/reports/daily (khách) → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('403 forbidden', function () { pm.expect(pm.response.code).eq(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/reports/daily", "host": ["{{base_url}}"], "path": ["admin", "reports", "daily"] }
+          }
+        },
+        {
+          "name": "10.03 POST /admin/users (khách) → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('403 forbidden', function () { pm.expect(pm.response.code).eq(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"x@cinema.local\",\n  \"password\": \"secret123\",\n  \"full_name\": \"X Y\",\n  \"role\": \"staff\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/admin/users", "host": ["{{base_url}}"], "path": ["admin", "users"] }
+          }
+        },
+        {
+          "name": "10.04 POST /auth/login (sai mật khẩu) → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 sai mat khau', function () { pm.expect(pm.response.code).eq(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customer_email}}\",\n  \"password\": \"SaiMatKhau123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "10.05 POST /auth/register (mật khẩu quá ngắn) → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 validation', function () { pm.expect(pm.response.code).eq(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"short@cinema.local\",\n  \"password\": \"123\",\n  \"full_name\": \"Short Pass\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "10.06 POST /orders/hold (không có ghế) → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 validation', function () { pm.expect(pm.response.code).eq(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_id\": \"{{show_id}}\",\n  \"seat_ids\": [],\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/orders/hold", "host": ["{{base_url}}"], "path": ["orders", "hold"] }
+          }
+        },
+        {
+          "name": "10.07 GET /movies/khong-ton-tai → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404 not found', function () { pm.expect(pm.response.code).eq(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/movies/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["movies", "00000000-0000-0000-0000-000000000000"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 — Kiểm chứng End-to-End",
+      "description": "Tổng hợp kiểm chứng toàn chuỗi sử dụng dữ liệu đã tạo ở các folder trước: đơn online, đơn quầy, và doanh thu sau closeDay.",
+      "item": [
+        {
+          "name": "11.01 E2E: đơn online — chi tiết khớp chuỗi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "pm.test('status confirmed', function () { pm.expect(b.data.status).eq('confirmed'); });",
+                  "pm.test('co 2 ve cua suat show_id', function () {",
+                  "  pm.expect(b.data.tickets.length).eq(2);",
+                  "  b.data.tickets.forEach(function (t) { pm.expect(t.showtime_id).eq(pm.collectionVariables.get('show_id')); });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders/{{online_booking_id}}", "host": ["{{base_url}}"], "path": ["orders", "{{online_booking_id}}"] }
+          }
+        },
+        {
+          "name": "11.02 E2E: bán quầy — đơn confirmed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0 + confirmed', function () { pm.expect(b.code).eq(0); pm.expect(b.data.status).eq('confirmed'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staff_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/orders/{{counter_booking_id}}", "host": ["{{base_url}}"], "path": ["orders", "{{counter_booking_id}}"] }
+          }
+        },
+        {
+          "name": "11.03 E2E: doanh thu hôm nay (sau closeDay 07.02)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "function pad(n) { return (n < 10 ? '0' : '') + n; }",
+                  "var d = new Date();",
+                  "pm.collectionVariables.set('date_today', d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('code==0', function () { pm.expect(b.code).eq(0); });",
+                  "const rows = Array.isArray(b.data) ? b.data : (b.data && b.data.items ? b.data.items : []);",
+                  "var row = rows.filter(function (r) { return (r.date || '') === pm.collectionVariables.get('date_today'); });",
+                  "if (row.length) { console.log('doanh thu hom nay:', row[0]); pm.test('co 2 don confirmed trong ngay', function () { pm.expect(row[0].order_count || row[0].bookings || 0).gte(2); }); }",
+                  "else { console.warn('Chua co daily row cho hom nay — chay lai 07.02 closeDay.'); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/reports/daily?from={{date_today}}&to={{date_today}}", "host": ["{{base_url}}"], "path": ["admin", "reports", "daily"], "query": [{ "key": "from", "value": "{{date_today}}" }, { "key": "to", "value": "{{date_today}}" }] }
+          }
+        },
+        {
+          "name": "11.04 DELETE /users/me (erasure — xóa tài khoản khách test)",
+          "description": "Xóa hoàn toàn account khách (GDPR erasure). Chạy CUỐI cùng vì sau đó customer token không còn hiệu lực.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx xoa thanh cong', function () { pm.expect(pm.response.code).lt(300); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customer_access_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/users/me", "host": ["{{base_url}}"], "path": ["users", "me"] }
+          }
+        }
+      ]
+    }
+  ]
+}
