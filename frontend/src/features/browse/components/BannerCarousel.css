@@ -1,0 +1,101 @@
+/* Hero slide change: keyframes, not transitions, so each activation restarts from the side it was entered from
+   (--banner-dir: 1 next, -1 prev). Tokens only; the reduced-motion block in index.css zeroes distance/scale. */
+
+.cp-banner-slide {
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cp-banner-slide.is-active {
+  opacity: 1;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* The outgoing slide stays painted under the incoming one, then fades: a true crossfade, no dip to black. */
+.cp-banner-slide.is-leaving {
+  z-index: 5;
+  animation: cp-banner-out var(--motion-duration-slow) var(--motion-ease-in)
+    var(--motion-duration-base) both;
+}
+
+.cp-banner-slide.is-leaving .cp-banner-media {
+  animation: cp-banner-media-out var(--motion-duration-decorative) var(--motion-ease-in-out) both;
+}
+
+.cp-banner-slide.is-entering {
+  animation: cp-banner-in var(--motion-duration-decorative) var(--motion-ease-out) both;
+}
+
+.cp-banner-slide.is-entering .cp-banner-media {
+  animation: cp-banner-media-in var(--motion-duration-decorative) var(--motion-ease-out) both;
+}
+
+.cp-banner-slide.is-entering .cp-banner-stagger > * {
+  animation: cp-banner-text-in var(--motion-duration-slow) var(--motion-ease-out) both;
+}
+
+.cp-banner-slide.is-entering .cp-banner-stagger > :nth-child(1) {
+  animation-delay: var(--motion-duration-base);
+}
+.cp-banner-slide.is-entering .cp-banner-stagger > :nth-child(2) {
+  animation-delay: calc(var(--motion-duration-base) + var(--motion-stagger-step));
+}
+.cp-banner-slide.is-entering .cp-banner-stagger > :nth-child(3) {
+  animation-delay: calc(var(--motion-duration-base) + 2 * var(--motion-stagger-step));
+}
+.cp-banner-slide.is-entering .cp-banner-stagger > :nth-child(4) {
+  animation-delay: calc(var(--motion-duration-base) + 3 * var(--motion-stagger-step));
+}
+.cp-banner-slide.is-entering .cp-banner-stagger > :nth-child(5) {
+  animation-delay: calc(var(--motion-duration-base) + 4 * var(--motion-stagger-step));
+}
+
+@keyframes cp-banner-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cp-banner-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes cp-banner-media-in {
+  from {
+    transform: translateX(calc(var(--banner-dir, 1) * var(--motion-distance-reveal)))
+      scale(var(--motion-scale-zoom));
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes cp-banner-media-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(calc(var(--banner-dir, 1) * -1 * var(--motion-distance-shift)));
+  }
+}
+
+@keyframes cp-banner-text-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--banner-dir, 1) * var(--motion-distance-reveal)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -1,0 +1,123 @@
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { Movie } from '@/types';
+import { filmPath } from '@/routes/paths';
+import { formatDuration } from '@/utils/format';
+import Button from '@/components/ui/Button';
+import LinkButton from '@/components/ui/LinkButton';
+import { movieBackdrop, movieYear } from '../movieImage';
+import { useTrailerPreview } from '../hooks/useTrailerPreview';
+import {
+  CARD_TITLE,
+  FOCUS_RING,
+  INK_35,
+  INK_60,
+  INK_BG_05,
+  INK_BG_06,
+  INK_BORDER_10,
+} from '@/theme/customerTw';
+
+interface MovieCardWideProps {
+  movie: Movie;
+  /** Passed only for `showing` movies; opens BookingModal in place. Absent means no "Book" button. */
+  onBook?: (movie: Movie) => void;
+  /** First row loads eagerly so the grid does not pop in under the fold-line. */
+  eager?: boolean;
+}
+
+/** Home grid card from QVisionShow frame 1-101. Two departures from the frame: age-rating badge
+ *  replaces the frame's invented `★ 4.5` (backend has no rating field); and this is a NEW component
+ *  rather than an edit of `PosterCard`, which stays portrait 2:3 for `/films`. */
+export const MovieCardWide = ({ movie, onBook, eager }: MovieCardWideProps) => {
+  const { t } = useTranslation();
+  const image = movieBackdrop(movie);
+  const {
+    src: previewSrc,
+    playing,
+    attachFrame,
+    onFrameLoad,
+    handlers,
+  } = useTrailerPreview(movie.trailer_url);
+  const meta = [movieYear(movie), movie.genre, formatDuration(movie.duration)]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <article
+      className={`flex h-full flex-col gap-3 rounded-2xl border p-3 ${INK_BORDER_10} ${INK_BG_05}`}
+      {...handlers}
+    >
+      <Link
+        to={filmPath(movie.id)}
+        aria-label={movie.title}
+        className={`group relative block aspect-3/2 overflow-hidden rounded-xl ${INK_BG_06} ${FOCUS_RING}`}
+      >
+        {image ? (
+          <img
+            src={image}
+            alt=""
+            loading={eager ? 'eager' : 'lazy'}
+            className="h-full w-full object-cover transition-transform duration-moderate ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-(--motion-scale-zoom)"
+          />
+        ) : (
+          <span
+            className={`absolute inset-0 flex items-center justify-center text-[40px] font-bold ${INK_35}`}
+            aria-hidden="true"
+          >
+            {movie.title.charAt(0).toUpperCase()}
+          </span>
+        )}
+        {previewSrc ? (
+          // 16:9 player sized by height so it covers the 3:2 frame with no letterbox bars.
+          // Decorative and click-through: the whole media box stays the link to the film.
+          <iframe
+            ref={attachFrame}
+            src={previewSrc}
+            onLoad={onFrameLoad}
+            title={t('customer.trailerOf', { title: movie.title })}
+            aria-hidden="true"
+            tabIndex={-1}
+            allow="autoplay; encrypted-media"
+            className={`pointer-events-none absolute top-0 left-1/2 aspect-video h-full -translate-x-1/2 border-none transition-opacity duration-moderate ease-out ${
+              playing ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ) : null}
+      </Link>
+
+      <Link to={filmPath(movie.id)} className={`group no-underline ${FOCUS_RING}`}>
+        <span className={`line-clamp-2 text-[15px] leading-snug font-bold ${CARD_TITLE}`}>
+          {movie.title}
+        </span>
+      </Link>
+
+      <p className={`truncate text-[13px] ${INK_60}`}>{meta || t('customer.genreUnknown')}</p>
+
+      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+        {movie.status === 'showing' && onBook ? (
+          <Button variant="primary" pill onClick={() => onBook(movie)}>
+            {t('customer.bookNow')}
+          </Button>
+        ) : (
+          <LinkButton to={filmPath(movie.id)} variant="ghost" pill>
+            {t('customer.viewDetail')}
+          </LinkButton>
+        )}
+
+        {movie.age_rating ? (
+          <span
+            className="flex-none rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{
+              background: `var(--cp-rating-${movie.age_rating.toLowerCase()})`,
+              color: `var(--cp-rating-${movie.age_rating.toLowerCase()}-text)`,
+            }}
+          >
+            {movie.age_rating}
+          </span>
+        ) : null}
+      </div>
+    </article>
+  );
+};
+
+export default MovieCardWide;
