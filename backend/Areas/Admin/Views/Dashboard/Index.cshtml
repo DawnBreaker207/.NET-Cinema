@@ -1,0 +1,201 @@
+@{
+    ViewData["Title"] = Html.T("menu.dashboard").ToString();
+    var isAdmin = User.IsInRole("admin");
+    string Pane(string k, string initial) => k == initial ? "ant-tabs-tabpane active" : "ant-tabs-tabpane";
+    string Act(string k, string initial) => k == initial ? "ant-tabs-tab active" : "ant-tabs-tab";
+}
+<div class="cp-page-head">
+    <h1 class="cp-page-title">@Html.T("menu.dashboard")</h1>
+</div>
+
+@if (isAdmin)
+{
+    <div class="ant-tabs" id="db-tabs" data-initial="overview">
+        <div class="ant-tabs-nav">
+            <button type="button" class="@Act("overview", "overview")" data-tab="overview">@Html.T("dashboard.tabOverview")</button>
+            <button type="button" class="@Act("analytics", "overview")" data-tab="analytics">@Html.T("dashboard.tabAnalytics")</button>
+            <button type="button" class="@Act("operations", "overview")" data-tab="operations">@Html.T("dashboard.tabOperations")</button>
+            <button type="button" class="@Act("reports", "overview")" data-tab="reports">@Html.T("dashboard.tabReports")</button>
+        </div>
+        <div class="ant-tabs-content">
+            @* ==================== Overview ==================== *@
+            <div class="@Pane("overview", "overview")" data-tab="overview">
+                <div id="db_ov_err"></div>
+                <div class="db-toolbar" id="db_ov_tf"></div>
+                <div class="db-kpis" id="db_ov_kpis"></div>
+                <div class="db-grid">
+                    <div class="ant-card db-span7">
+                        <div class="ant-card-head">@Html.T("dashboard.revenueByDay")</div>
+                        <div class="ant-card-body">
+                            <div class="db-chart" id="db_ov_area" style="height:260px"></div>
+                        </div>
+                    </div>
+                    <div class="ant-card db-span5">
+                        <div class="ant-card-head">@Html.T("dashboard.paySplit")</div>
+                        <div class="ant-card-body">
+                            <div id="db_ov_pie"></div>
+                        </div>
+                    </div>
+                </div>
+                <h5 class="db-staff-title">@Html.T("movie.nowShowing")</h5>
+                <div class="db-movies" id="db_ov_movies"></div>
+            </div>
+
+            @* ==================== Analytics ==================== *@
+            <div class="@Pane("analytics", "overview")" data-tab="analytics">
+                <div id="db_an_err"></div>
+                <div class="db-toolbar" id="db_an_tf"></div>
+                <div class="db-grid">
+                    <div class="ant-card db-span6" id="db_an_pm">
+                        <div class="ant-card-head">@Html.T("dashboard.paretoMovies")</div>
+                        <div class="ant-card-body"><div class="db-chart" id="db_an_pm_c"></div></div>
+                    </div>
+                    <div class="ant-card db-span6" id="db_an_ph">
+                        <div class="ant-card-head">@Html.T("dashboard.paretoHalls")</div>
+                        <div class="ant-card-body"><div class="db-chart" id="db_an_ph_c"></div></div>
+                    </div>
+                    <div class="ant-card db-span6" id="db_an_tm">
+                        <div class="ant-card-head">@Html.T("dashboard.topMovies")</div>
+                        <div class="ant-card-body">
+                            <div class="ant-table-wrap">
+                                <table class="ant-table db-table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:52px">@Html.T("dashboard.colRank")</th>
+                                            <th>@Html.T("dashboard.colMovie")</th>
+                                            <th class="text-right">@Html.T("dashboard.colTickets")</th>
+                                            <th class="text-right">@Html.T("dashboard.colRevenue")</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="db_an_tm_rows"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ant-card db-span6" id="db_an_th">
+                        <div class="ant-card-head">@Html.T("dashboard.topHalls")</div>
+                        <div class="ant-card-body">
+                            <div class="ant-table-wrap">
+                                <table class="ant-table db-table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:52px">@Html.T("dashboard.colRank")</th>
+                                            <th>@Html.T("dashboard.colHall")</th>
+                                            <th class="text-right">@Html.T("dashboard.colTickets")</th>
+                                            <th class="text-right">@Html.T("dashboard.colRevenue")</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="db_an_th_rows"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="db-note" id="db_an_range"></div>
+            </div>
+
+            @* ==================== Operations ==================== *@
+            <div class="@Pane("operations", "overview")" data-tab="operations">
+                <div id="db_op_err"></div>
+                <div class="mb-3 flex items-baseline justify-between gap-2">
+                    <h5 class="m-0 text-base font-semibold">@Html.T("dashboard.opsAlerts")</h5>
+                    <span class="text-xs text-[var(--text-2)]" id="db_op_updated"></span>
+                </div>
+                <div class="mb-4" id="db_op_alerts"></div>
+                <div class="db-grid mb-4">
+                    <div class="ant-card db-span5">
+                        <div class="ant-card-head">@Html.T("dashboard.opsOccupancyToday")</div>
+                        <div class="ant-card-body"><div class="db-chart" id="db_op_gauge" style="height:190px"></div></div>
+                    </div>
+                    <div class="ant-card db-span7">
+                        <div class="ant-card-head">@Html.T("dashboard.opsHourlySales")</div>
+                        <div class="ant-card-body"><div class="db-chart" id="db_op_hourly" style="height:190px"></div></div>
+                    </div>
+                </div>
+                <h5 class="db-staff-title">@Html.T("dashboard.upcomingToday")</h5>
+                <div id="db_op_board"></div>
+            </div>
+
+            @* ==================== Reports ==================== *@
+            <div class="@Pane("reports", "overview")" data-tab="reports">
+                <div class="db-toolbar">
+                    <span class="ant-input ant-date-range" style="height:32px;width:296px">
+                        <span class="ant-date-shell db-date-shell" style="width:100px">
+                            <input id="db_rp_from" type="date" required />
+                            <span class="ant-date-ph" id="db_rp_from_lbl"></span>
+                        </span>
+                        <span class="anticon text-[var(--text-3)]" style="font-size:16px">@Html.Raw(Icons.Get("SwapRight"))</span>
+                        <span class="ant-date-shell db-date-shell" style="width:100px">
+                            <input id="db_rp_to" type="date" required />
+                            <span class="ant-date-ph" id="db_rp_to_lbl"></span>
+                        </span>
+                        <span class="anticon ml-auto shrink-0 text-[var(--text-3)]">@Html.Raw(Icons.Get("Calendar"))</span>
+                    </span>
+                    <button type="button" class="ant-btn" id="db_rp_close">
+                        <span class="ant-spin mr-1.5" id="db_rp_close_ic" style="display:none"></span>@Html.T("report.closeDay")
+                    </button>
+                </div>
+                <div id="db_rp_error"></div>
+                <div class="db-stats" id="db_rp_stats"></div>
+                <div class="ant-alert ant-alert-info" id="db_rp_info">
+                    <span class="ant-alert-icon anticon">@Html.Raw(Icons.Get("InfoCircleFilled"))</span>
+                    <div class="flex-1">@Html.T("report.axesHint")</div>
+                    <button type="button" class="ant-alert-close anticon" data-close-alert>@Html.Raw(Icons.Get("Close"))</button>
+                </div>
+                <div id="db_rp_missing"></div>
+                <div class="ant-card mb-4">
+                    <div class="ant-card-head">@Html.T("report.byMovie")</div>
+                    <div class="ant-card-body">
+                        <div class="ant-table-wrap">
+                            <table class="ant-table db-table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>@Html.T("report.movie")</th>
+                                        <th class="text-right" style="width:110px">@Html.T("report.showtimeCount")</th>
+                                        <th class="text-right" style="width:150px">@Html.T("report.ticketSales")</th>
+                                        <th class="text-right" style="width:110px">@Html.T("report.occupancy")</th>
+                                        <th class="text-right" style="width:150px">@Html.T("report.totalSales")</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db_rp_bymovie"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="ant-card">
+                    <div class="ant-card-head">@Html.T("report.byDay")</div>
+                    <div class="ant-card-body">
+                        <div class="ant-table-wrap">
+                            <table class="ant-table db-table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width:150px">@Html.T("report.date")</th>
+                                        <th class="text-right" style="width:150px">@Html.T("report.revenue")</th>
+                                        <th class="text-right" style="width:110px">@Html.T("report.tickets")</th>
+                                        <th class="text-right" style="width:150px">@Html.T("report.seats")</th>
+                                        <th class="text-right" style="width:110px">@Html.T("report.occupancy")</th>
+                                        <th style="width:170px">@Html.T("report.closedAt")</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db_rp_byday"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div id="st-root">
+        <div id="st_err"></div>
+        <div class="db-kpis" id="st_kpis"></div>
+        <h5 class="db-staff-title">@Html.T("dashboard.staffToday")</h5>
+        <div id="st_board"></div>
+    </div>
+}
+
+@section Scripts {
+    <script src="/js/dashboard.js"></script>
+}
